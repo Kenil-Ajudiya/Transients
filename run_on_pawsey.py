@@ -11,7 +11,7 @@ filters = [
     Filter('spike', 5.5, 8, False, fil.Spike, 4),
     Filter('rms'  , 2.0, 3, True , fil.RMS)]
 
-for obsid in obslist.obsids:
+for obsid in [1285779208]:#obslist.obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
     cube_fname = path.format(obsid, 'transient.hdf5')

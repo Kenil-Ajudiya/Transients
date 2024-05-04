@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.wcs.utils import pixel_to_skycoord
 from gleam_x.bin.beam_value_at_radec import beam_value, parse_metafits
 from astropy import units as u
-import lowner_john_ellipse.src.lowner_john_ellipse as ellipse
+import lowner_john_ellipse as ellipse
 import matplotlib.pyplot as plt
 
 def FindIslands(obs, filters, get_beam=True):

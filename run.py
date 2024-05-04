@@ -5,9 +5,6 @@ import numpy as np
 
 obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
 path = '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_{1}'
-n_spike = 0
-n_tcg = 0
-n_rms = 0
 obs_idx = 0
 
 freqs = np.unique(obslist.freq)
@@ -32,14 +29,14 @@ obslist.to_csv('100_obs.csv')
 
 # NEW NEW ULTRA EPIC FILTER SETTING !!!!!!!!
 filters = [
-    Filter('tcg'  , 8, True , fil.Correlator, (1,1,1), (25,1,1)),
-    Filter('spike', 8, False, fil.Spike, 4),
-    Filter('rms'  , 3, True , fil.RMS)]
+    Filter('tcg'  , 5.5, 8, True , fil.Correlator, (1,1,1), (25,1,1)),
+    Filter('spike', 5.5, 8, False, fil.Spike, 4),
+    Filter('rms'  , 2.0, 3, True , fil.RMS)]
 
 for obsid in obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
-    cands = TransientSearch(path, obsid, filters)
+    cands = TransientSearch(path, obsid, filters, 'mod', False)
     os.system(f'cp {path.format(obsid, "*.png")} {path.format(obsid, "*.gif")} ./candidates')
     if len(cands) > 10:
         os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')

@@ -15,9 +15,6 @@ import os
 from glob import glob
 import matplotlib.pyplot as plt
 
-# 1201812024
-# path = '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_{1}'
-
 class Observation:
     obsid = None
     data = None
@@ -33,11 +30,11 @@ class Observation:
     mean = None
 
 class Filter:
-    def __init__(self, name, cut, scale_rms, func, *args):
+    def __init__(self, name, cut_low, cut_high, scale_rms, func, *args):
         self.name = name
         self.data = None
-        self.cut_low_unscaled = cut * 0.65
-        self.cut_high_unscaled = cut
+        self.cut_low_unscaled = cut_low
+        self.cut_high_unscaled = cut_high
         self.cut_low = None
         self.cut_high = None
         self.func = func
@@ -55,7 +52,7 @@ class Filter:
         self.data = self.func(cube, *self.args)
 
 
-def TransientSearch(path, obsid, filters, run_name):
+def TransientSearch(path, obsid, filters, run_name, make_plots):
     obs = Observation()
     obs.obsid = obsid
     obs.data, obs.header = io.ReadImage(path.format(obs.obsid, 'transient.hdf5'))
@@ -75,7 +72,8 @@ def TransientSearch(path, obsid, filters, run_name):
     frame_rms = np.std(obs.data, axis=(1,2))
     ignore_frames = frame_rms > obs.rms * 1.5
     cube_purged = obs.data[~ignore_frames, :, :]
-    print(np.count_nonzero(ignore_frames), 'frames ignored')
+    if np.count_nonzero(ignore_frames) > 0:
+        print('skipped frames:', np.nonzero(ignore_frames)[0])
 
     # Applying filters
 
@@ -91,26 +89,23 @@ def TransientSearch(path, obsid, filters, run_name):
 
     isl_table_selected = sel.SelectSources(isl_table, isl_labels, filters)
 
-    print(len(isl_table))
+    print(len(isl_table), '->', len(isl_table_selected))
     for flr in filters:
-        print(flr.name, np.count_nonzero(isl_table['valid_'+flr.name]))
-
-    print(len(isl_table_selected))
-    for flr in filters:
-        print(flr.name, np.count_nonzero(isl_table_selected['valid_'+flr.name]))
+        print(flr.name, np.count_nonzero(isl_table['valid_'+flr.name]), '->', np.count_nonzero(isl_table_selected['valid_'+flr.name]))
 
     # knw_table.write(path.format(obsid, 'known.fits'), format='fits', overwrite=True)
     isl_table.write(path.format(obsid, run_name+'_islands.fits'), format='fits', overwrite=True)
     isl_table_selected.write(path.format(obsid, run_name+'_islands_selected.fits'), format='fits', overwrite=True)
 
-    # Removing old images
-    oldfiles = glob(path.format(obs.obsid, 'candidate_*'))
-    for f in oldfiles:
-        os.remove(f)
+    if make_plots:
+        # Removing old images
+        oldfiles = glob(path.format(obs.obsid, 'candidate_*'))
+        for f in oldfiles:
+            os.remove(f)
 
-    if len(isl_table_selected) <= 10:
-        for candidate in isl_table_selected:
-            diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels)
+        if len(isl_table_selected) <= 10:
+            for candidate in isl_table_selected:
+                diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels)
 
     return isl_table_selected
 
