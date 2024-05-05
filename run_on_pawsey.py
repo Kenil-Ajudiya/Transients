@@ -1,8 +1,10 @@
 from transient_search import *
-import pandas as pd
 import os
 
-obslist = pd.read_csv('obsids_shuf.txt')
+with open('obsids_shuf.txt', 'r') as file:
+    lines = file.readlines()
+    obsids = [line.strip() for line in lines]
+
 path = os.path.expanduser('~/candidates/{0}/{0}_{1}')
 workdir = os.path.expanduser('~/candidates/{0}')
 obs_idx = 0
@@ -12,7 +14,7 @@ filters = [
     Filter('spike', 5, 8, False, fil.Spike, 4),
     Filter('rms'  , 2, 3, True , fil.RMS)]
 
-for obsid in obslist.obsid:
+for obsid in obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
     cube_fname = path.format(obsid, 'transient.hdf5')
