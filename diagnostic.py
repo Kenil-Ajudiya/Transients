@@ -102,7 +102,7 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     except Exception as e:
         gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
         # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
-        print(e)
+        print(e, flush=True)
     gleam_data = gleam_hdu.data
     gleam_wcs = WCS(gleam_hdu.header, naxis=2)
 

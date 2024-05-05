@@ -73,7 +73,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
     ignore_frames = frame_rms > obs.rms * 1.5
     cube_purged = obs.data[~ignore_frames, :, :]
     if np.count_nonzero(ignore_frames) > 0:
-        print('skipped frames:', np.nonzero(ignore_frames)[0])
+        print('skipped frames:', np.nonzero(ignore_frames)[0], flush=True)
 
     # Applying filters
 
@@ -93,9 +93,9 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
 
     isl_table_selected = sel.SelectSources(isl_table, isl_labels, filters)
 
-    print(len(isl_table), '->', len(isl_table_selected))
+    print(len(isl_table), '->', len(isl_table_selected), flush=True)
     for flr in filters:
-        print(flr.name, np.count_nonzero(isl_table['valid_'+flr.name]), '->', np.count_nonzero(isl_table_selected['valid_'+flr.name]))
+        print(flr.name, np.count_nonzero(isl_table['valid_'+flr.name]), '->', np.count_nonzero(isl_table_selected['valid_'+flr.name]), flush=True)
 
     # knw_table.write(path.format(obsid, 'known.fits'), format='fits', overwrite=True)
     isl_table.write(path.format(obsid, run_name+'_islands.fits'), format='fits', overwrite=True)

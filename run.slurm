@@ -9,4 +9,5 @@
 
 module load singularity/3.11.4-slurm
 export export SINGULARITY_BINDPATH=`pwd`:$HOME
-singularity exec container.sif python3 run_on_pawsey.py
+singularity exec container.sif python3 run_on_pawsey.py $1 $2
+echo "Job took ${SECONDS} seconds"
