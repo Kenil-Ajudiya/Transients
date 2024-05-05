@@ -80,7 +80,7 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     try:
         deep_fname = path.format(obs.obsid, 'deep-MFS-image-pb.fits')
         if not os.path.isfile(deep_fname):
-            os.system('scp ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_deep-MFS-image-pb.fits {1}'.format(obs.obsid, deep_fname))
+            os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_deep-MFS-image-pb.fits {1}'.format(obs.obsid, deep_fname))
         deep = fits.open(deep_fname)
         deep_data = np.squeeze(deep[0].data)
         deep_wcs = WCS(deep[0].header, naxis=['longitude', 'latitude'])
