@@ -8,5 +8,5 @@
 #SBATCH --output=/scratch/pawsey0272/chorvath/out/%A
 
 module load singularity/3.11.4-slurm
-export export SINGULARITY_BINDPATH=`pwd`:$HOME,$HOME/.ssh
+export export SINGULARITY_BINDPATH=`pwd`:$HOME
 singularity exec container.sif python3 run_on_pawsey.py
