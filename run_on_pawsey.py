@@ -12,7 +12,7 @@ filters = [
     Filter('spike', 5, 8, False, fil.Spike, 4),
     Filter('rms'  , 2, 3, True , fil.RMS)]
 
-for obsid in [1285779208]:#obslist.obsids:
+for obsid in obslist.obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
     cube_fname = path.format(obsid, 'transient.hdf5')
@@ -24,6 +24,6 @@ for obsid in [1285779208]:#obslist.obsids:
             if len(cands) > 10:
                 os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
             os.system(f'rm {cube_fname}')
-            os.system(f'rm {path.format(obsid, "deep_MFS-image-pb.fits")}')
+            os.system(f'rm {path.format(obsid, "deep-MFS-image-pb.fits")}')
         else:
-            os.system(f'rm ~/candidates/{obsid}')
+            os.system(f'rm -r ~/candidates/{obsid}')

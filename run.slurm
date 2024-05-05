@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --account=pawsey0272
-#SBATCH --partition=debug
-#SBATCH --time=00:05:00
+#SBATCH --partition=work
+#SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --mem=16gb
 #SBATCH --ntasks-per-node=1
