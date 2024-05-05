@@ -24,6 +24,6 @@ for obsid in [1285779208]:#obslist.obsids:
             if len(cands) > 10:
                 os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
             os.system(f'rm {cube_fname}')
-            os.system(f'rm {path.format(obsid, 'deep_MFS-image-pb.fits')}')
+            os.system(f'rm {path.format(obsid, "deep_MFS-image-pb.fits")}')
         else:
             os.system(f'rm ~/candidates/{obsid}')
