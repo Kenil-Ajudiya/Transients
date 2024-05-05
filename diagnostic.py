@@ -99,12 +99,13 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         survey='GLEAM 170-231 MHz'
         gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize)[0][0]
         # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        gleam_data = gleam_hdu.data
+        gleam_wcs = WCS(gleam_hdu.header, naxis=2)
     except Exception as e:
         gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
-        # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        gleam_wcs = peak_frame.wcs
         print(e, flush=True)
-    gleam_data = gleam_hdu.data
-    gleam_wcs = WCS(gleam_hdu.header, naxis=2)
 
     # Getting pulsar catalogue
     psrs = fits.open(os.getenv('ATNF_PULSAR_CAT', "~/Documents/MWA-GPM-data/atnf_pulsar_cat.fits"))[1].data
