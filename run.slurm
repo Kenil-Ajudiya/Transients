@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #SBATCH --account=pawsey0272
-#SBATCH --partition=debugq
+#SBATCH --partition=debug
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --mem=16gb
