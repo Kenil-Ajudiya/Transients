@@ -3,7 +3,7 @@
 #SBATCH --partition=work
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
-#SBATCH --mem=16gb
+#SBATCH --mem=32gb
 #SBATCH --ntasks-per-node=1
 #SBATCH --output=/scratch/pawsey0272/chorvath/out/%A
 
