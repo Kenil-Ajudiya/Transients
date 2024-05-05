@@ -52,7 +52,7 @@ class Filter:
         self.data = self.func(cube, *self.args)
 
 
-def TransientSearch(path, obsid, filters, run_name, make_plots):
+def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
     obs = Observation()
     obs.obsid = obsid
     obs.data, obs.header = io.ReadImage(path.format(obs.obsid, 'transient.hdf5'))
@@ -79,6 +79,10 @@ def TransientSearch(path, obsid, filters, run_name, make_plots):
 
     for flr in filters:
         flr.apply(cube_purged)
+    
+    if save_filtered:
+        for flr in filters:
+            io.WriteImage(path.format(obs.obsid, flr.data, obs.header, flr.name))
 
     # Detect islands
     isl_table, isl_labels, isl_slices = isl.FindIslands(obs, filters, True)

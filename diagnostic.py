@@ -16,6 +16,7 @@ import os
 from glob import glob
 from astropy.wcs import WCS
 import os
+from astropy.wcs.utils import pixel_to_skycoord
 
 def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle, ctitle, xax=True, yax=True, highlight=False):
     image_cut = cutout.astype(np.float32)
@@ -32,7 +33,7 @@ def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle,
         ax.set_ylabel('Dec')
     else:
         ax.coords['dec'].set_ticklabel_visible(False)
-    ax.contour(isl_labels, linewidths=0.5, colors=['blue'], extent=im.get_extent())
+    ax.contour(isl_labels, levels=0, linewidths=0.5, colors=['blue'], extent=im.get_extent())
     for p in pulsars:
         ax.scatter(p["RAJ2000"], p["DEJ2000"], marker='o', facecolors='none', edgecolors='green', transform=ax.get_transform('world'))
         ax.text(p["RAJ2000"]+0.03, p["DEJ2000"]+0.03, "PSR{0}".format(p["PSRJ"]), color="green", transform=ax.get_transform('world'))
@@ -72,7 +73,8 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
 
     # Getting image cutouts
     peak_frame = Cutout2D(obs.data[candidate['peak_frame']], skycoord, boxsize, wcs=obs.wcs)
-    island = Cutout2D(isl_labels, skycoord, boxsize, wcs=obs.wcs).data == candidate['cand_id']
+    island_cutout = Cutout2D(isl_labels, skycoord, boxsize, wcs=obs.wcs)
+    island = island_cutout.data == candidate['cand_id']
     flr_cut = [Cutout2D(flr.data, skycoord, boxsize, wcs=obs.wcs).data for flr in filters]
 
     try:
@@ -96,11 +98,13 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         # 'GLEAM 72-103 MHz', 'GLEAM 103-134 MHz', 'GLEAM 139-170 MHz', 'GLEAM 170-231 MHz'
         survey='GLEAM 170-231 MHz'
         gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize)[0][0]
-        gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
     except Exception as e:
-        hdu_gleam = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
-        gleam, _ = reproject_interp(hdu_gleam, peak_frame.wcs, peak_frame.data.shape)
+        gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
+        # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
         print(e)
+    gleam_data = gleam_hdu.data
+    gleam_wcs = WCS(gleam_hdu.header, naxis=2)
 
     # Getting pulsar catalogue
     psrs = fits.open(os.getenv('ATNF_PULSAR_CAT', "~/Documents/MWA-GPM-data/atnf_pulsar_cat.fits"))[1].data
@@ -112,7 +116,7 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     fig = plt.figure(figsize=(28, 14))
     #                left   bottom width  height
     ShowCutout(fig, [0.100, 0.350, 0.200, 0.300], deep.data      , deep.wcs      , island, candidate, psrs, 'Deep'      , 'Jy')
-    ShowCutout(fig, [0.100, 0.750, 0.200, 0.300], gleam          , peak_frame.wcs, island, candidate, psrs, 'GLEAM'     , 'Jy')
+    ShowCutout(fig, [0.100, 0.750, 0.200, 0.300], gleam_data     , gleam_wcs     , island, candidate, psrs, 'GLEAM'     , 'Jy')
     ShowCutout(fig, [0.325, 0.350, 0.200, 0.300], peak_frame.data, peak_frame.wcs, island, candidate, psrs, 'Peak Frame', 'Jy')
     ShowCurve( fig, [0.333, 0.750, 0.375, 0.300], obs, candidate)
     ShowHist(  fig, [0.555, 0.350, 0.150, 0.300], obs_cutout, candidate)
@@ -135,7 +139,8 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         plt.axis("off")
         plt.margins(x=0)
         plt.margins(y=0)
-        fig.savefig(path.format(obs.obsid, f"{i:02d}.png"), bbox_inches="tight", dpi=dpi, pad_inches = 0)
+        fname = path.format(obs.obsid, f"{i:02d}.png")
+        fig.savefig(fname, bbox_inches="tight", dpi=dpi, pad_inches = 0)
         plt.close(fig)
     # Combining pngs to gif
     os.system("convert {0} {1}".format(
