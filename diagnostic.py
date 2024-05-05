@@ -103,10 +103,8 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         gleam_wcs = WCS(gleam_hdu.header, naxis=2)
     except Exception as e:
         gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
-        # gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
-        gleam = Cutout2D(np.squeeze(gleam_hdu.data), skycoord, boxsize, wcs=WCS(gleam_hdu, naxis=2))
-        gleam_data = gleam.data
-        gleam_wcs = gleam.wcs
+        gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        gleam_wcs = peak_frame.wcs
         print(e, flush=True)
 
     # Getting pulsar catalogue
