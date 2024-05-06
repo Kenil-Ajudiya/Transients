@@ -139,8 +139,13 @@ def FindIslands(obs, filters, get_beam=True):
     return table, labels, slices
 
 def GetBeamAtCoords(obsid, ra_deg, dec_deg):
-    url = "http://ws.mwatelescope.org/metadata/fits?obs_id=" + str(obsid)
-    t, delays, freq, gridnum = parse_metafits(url)
-    beam_x, beam_y = beam_value(ra_deg, dec_deg, t, delays, freq, gridnum)
-    vals = (beam_x + beam_y) / 2
-    return vals
+    try:
+        url = "http://ws.mwatelescope.org/metadata/fits?obs_id=" + str(obsid)
+        t, delays, freq, gridnum = parse_metafits(url)
+        beam_x, beam_y = beam_value(ra_deg, dec_deg, t, delays, freq, gridnum)
+        vals = (beam_x + beam_y) / 2
+        return vals
+    except Exception as e:
+        print(e)
+        print('Failed to get beam values! Setting them to 1.')
+        return np.ones(ra_deg.shape, dtype=np.float64)
