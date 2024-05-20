@@ -18,11 +18,16 @@ from astropy.wcs import WCS
 import os
 from astropy.wcs.utils import pixel_to_skycoord
 
-def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle, ctitle, xax=True, yax=True, highlight=False):
+def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle, ctitle, vmin=None, vmax=None, interval=97, xax=True, yax=True, highlight=False):
     image_cut = cutout.astype(np.float32)
-    image_min, image_max = np.min(image_cut), np.max(image_cut)
     ax = fig.add_axes(axsize, projection=wcs)
-    im = ax.imshow(image_cut, vmin=image_min, vmax=image_max, origin='lower', cmap='gray')
+    interval = PercentileInterval(interval)
+    vmin_interval, vmax_interval = interval.get_limits(image_cut)
+    if vmin is None:
+        vmin = vmin_interval
+    if vmax is None:
+        vmax = vmax_interval
+    im = ax.imshow(image_cut, vmin=vmin, vmax=vmax, origin='lower', cmap='gray')
     ax.set_title(ftitle)
     cbar = plt.colorbar(im, ax=ax, label=ctitle)
     if xax:
@@ -33,29 +38,37 @@ def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle,
         ax.set_ylabel('Dec')
     else:
         ax.coords['dec'].set_ticklabel_visible(False)
-    ax.contour(isl_labels, levels=0, linewidths=0.5, colors=['blue'], extent=im.get_extent())
+    # ax.plot(candidate['ra_deg'] , candidate['dec_deg'] , 'xb', transform=ax.get_transform('world'))
+    ax.contour(isl_labels, levels=0, linewidths=0.5, colors=['blue'])#, extent=im.get_extent())
     for p in pulsars:
         ax.scatter(p["RAJ2000"], p["DEJ2000"], marker='o', facecolors='none', edgecolors='green', transform=ax.get_transform('world'))
         ax.text(p["RAJ2000"]+0.03, p["DEJ2000"]+0.03, "PSR{0}".format(p["PSRJ"]), color="green", transform=ax.get_transform('world'))
-    ax.plot(candidate['nks1_ra_deg'], candidate['nks1_dec_deg'], 'xr', transform=ax.get_transform('world'))
+    ax.plot(candidate['nks_ra_deg'] , candidate['nks_dec_deg'] , 'xr', transform=ax.get_transform('world'))
     ax.plot(candidate['nks2_ra_deg'], candidate['nks2_dec_deg'], 'xg', transform=ax.get_transform('world'))
     if highlight:
-        cbar.ax.yaxis.label.set_color('red')
+        cbar.ax.yaxis.label.set_fontweight('bold')
     return ax
 
-def ShowCurve(fig, axsize, obs, candidate):
+def ShowCurve(fig, axsize, obs, candidate, xax=True, yax=True):
     time = np.arange(0, obs.shape[0]) * obs.tstep
     ax = fig.add_axes(axsize)
     markers, caps, bars = ax.errorbar(time, candidate['curve'], fmt='b-', label='Candidate', yerr=obs.rms)
     (bar.set_alpha(0.5) for bar in bars)
-    ax.plot(time, candidate['nks1_curve'], 'r-', alpha=0.5, label='Known 1')
+    ax.plot(time, candidate['nks_curve'] , 'r-', alpha=0.5, label='Known 1')
     ax.plot(time, candidate['nks2_curve'], 'g-', alpha=0.5, label='Known 2')
     ax.axhline(obs.mean, color='black', linestyle=':')
     ax.axhline(obs.mean - obs.rms, color='black', linestyle=':')
     ax.axhline(obs.mean + obs.rms, color='black', linestyle=':')
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Flux (Jy)')
     ax.legend()
+    if xax:
+        ax.set_xlabel('Time (s)')
+    else:
+        ax.set_xticklabels([])
+    if yax:
+        ax.set_ylabel('Flux (Jy)')
+    else:
+        ax.set_yticklabels([])
+    return ax
 
 def ShowHist(fig, axsize, obs_cutout, candidate):
     ax = fig.add_axes(axsize)
@@ -66,6 +79,12 @@ def ShowHist(fig, axsize, obs_cutout, candidate):
     ax.set_xlabel('Flux (Jy)')
     ax.set_ylabel('Number density')
     ax.legend()
+
+def GetPulsars(skycoord, boxsize):
+    psrs = fits.open(os.getenv('ATNF_PULSAR_CAT', "~/Documents/MWA-GPM-data/atnf_pulsar_cat.fits"))[1].data
+    psr_coords = SkyCoord(psrs["RAJ2000"], psrs["DEJ2000"], unit=(u.deg, u.deg))
+    idx_psrs = psr_coords.separation(skycoord) < boxsize / 2
+    return psrs[idx_psrs]
 
 def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     boxsize = 1*u.deg
@@ -81,13 +100,17 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         deep_fname = path.format(obs.obsid, 'deep-MFS-image-pb.fits')
         if not os.path.isfile(deep_fname):
             os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_deep-MFS-image-pb.fits {1}'.format(obs.obsid, deep_fname))
-        deep = fits.open(deep_fname)
-        deep_data = np.squeeze(deep[0].data)
-        deep_wcs = WCS(deep[0].header, naxis=['longitude', 'latitude'])
+        deep_hdu = fits.open(deep_fname)[0]
+        deep_data = np.squeeze(deep_hdu.data)
+        deep_wcs = WCS(deep_hdu.header, naxis=['longitude', 'latitude'])
+        deep = Cutout2D(deep_data, skycoord, boxsize, wcs=deep_wcs)
+        deep_data = deep.data
+        deep_wcs = deep.wcs
+        # deep_data, _ = reproject_interp(deep_hdu, peak_frame.wcs, peak_frame.data.shape)
+        # deep_wcs = peak_frame.wcs
     except FileNotFoundError:
-        deep_data = np.zeros(obs.shape[1:])
-        deep_wcs = obs.wcs
-    deep = Cutout2D(deep_data, skycoord, boxsize, wcs=deep_wcs)
+        deep_data = np.zeros(peak_frame.shape)
+        deep_wcs = peak_frame.wcs
 
     obs_cutout = []
     for i in range(obs.shape[0]):
@@ -97,10 +120,11 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     try:
         # 'GLEAM 72-103 MHz', 'GLEAM 103-134 MHz', 'GLEAM 139-170 MHz', 'GLEAM 170-231 MHz'
         survey='GLEAM 170-231 MHz'
-        gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize)[0][0]
-        # gleam, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
-        gleam_data = gleam_hdu.data
-        gleam_wcs = WCS(gleam_hdu.header, naxis=2)
+        gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize*1.5)[0][0]
+        gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+        gleam_wcs = peak_frame.wcs
+        # gleam_data = gleam_hdu.data
+        # gleam_wcs = WCS(gleam_hdu.header, naxis=2)
     except Exception as e:
         gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
         gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
@@ -108,23 +132,24 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         print(e, flush=True)
 
     # Getting pulsar catalogue
-    psrs = fits.open(os.getenv('ATNF_PULSAR_CAT', "~/Documents/MWA-GPM-data/atnf_pulsar_cat.fits"))[1].data
-    psr_coords = SkyCoord(psrs["RAJ2000"], psrs["DEJ2000"], unit=(u.deg, u.deg))
-    idx_psrs = psr_coords.separation(skycoord) < boxsize / 2
-    psrs = psrs[idx_psrs]
+    psrs = GetPulsars(skycoord, boxsize)
 
     # Placing plots on figure
     fig = plt.figure(figsize=(28, 14))
-    #                left   bottom width  height
-    ShowCutout(fig, [0.100, 0.350, 0.200, 0.300], deep.data      , deep.wcs      , island, candidate, psrs, 'Deep'      , 'Jy')
-    ShowCutout(fig, [0.100, 0.750, 0.200, 0.300], gleam_data     , gleam_wcs     , island, candidate, psrs, 'GLEAM'     , 'Jy')
-    ShowCutout(fig, [0.325, 0.350, 0.200, 0.300], peak_frame.data, peak_frame.wcs, island, candidate, psrs, 'Peak Frame', 'Jy')
-    ShowCurve( fig, [0.333, 0.750, 0.375, 0.300], obs, candidate)
-    ShowHist(  fig, [0.555, 0.350, 0.150, 0.300], obs_cutout, candidate)
+    #                    left  bottom  width  height
+    ax = ShowCurve(fig, [0.310, 0.660, 0.375, 0.300], obs, candidate, yax=False)
+    vmin, vmax = ax.get_ylim()
+    ShowCutout(fig,     [0.100, 0.660, 0.200, 0.300], peak_frame.data, peak_frame.wcs, island, candidate, psrs, '', 'Transient cube (Jy)', vmin=vmin, vmax=vmax, xax=False)
+
+    ShowCutout(fig,     [0.100, 0.340, 0.200, 0.300], gleam_data     , gleam_wcs     , island, candidate, psrs, '',          'GLEAM (Jy)', interval=97)
+    ShowCutout(fig,     [0.300, 0.340, 0.200, 0.300], deep_data      , deep_wcs      , island, candidate, psrs, '',           'Deep (Jy)', interval=99, yax=False)
+    ShowHist(  fig,     [0.530, 0.340, 0.155, 0.300], obs_cutout     , candidate)
     
-    ShowCutout(fig, [0.725, 0.350, 0.150, 0.200], flr_cut[0], peak_frame.wcs, island, candidate, psrs, None, filters[0].name, highlight=candidate['valid_'+filters[0].name])
-    ShowCutout(fig, [0.725, 0.600, 0.150, 0.200], flr_cut[1], peak_frame.wcs, island, candidate, psrs, None, filters[1].name, highlight=candidate['valid_'+filters[1].name])
-    ShowCutout(fig, [0.725, 0.850, 0.150, 0.200], flr_cut[2], peak_frame.wcs, island, candidate, psrs, None, filters[2].name, highlight=candidate['valid_'+filters[2].name])
+    ShowCutout(fig,     [0.700, 0.760, 0.150, 0.200], flr_cut[2]     , peak_frame.wcs, island, candidate, psrs, '',       filters[2].name, interval=99, highlight=candidate['valid_'+filters[2].name], xax=False)
+    ShowCutout(fig,     [0.700, 0.550, 0.150, 0.200], flr_cut[1]     , peak_frame.wcs, island, candidate, psrs, '',       filters[1].name, interval=99, highlight=candidate['valid_'+filters[1].name], xax=False)
+    ShowCutout(fig,     [0.700, 0.340, 0.150, 0.200], flr_cut[0]     , peak_frame.wcs, island, candidate, psrs, '',       filters[0].name, interval=99, highlight=candidate['valid_'+filters[0].name])
+
+    fig.suptitle('obs_id: {0} cand_id: {1} cent_freq: {2} MHz coords: ({3}, {4}) ({5:.6}, {6:.6}) cube_rms: {7:.6} Jy num_cands / num_islands: {8}'.format(obs.obsid, candidate['cand_id'], int(obs.freq/1e6), skycoord.ra.to_string(u.hour), skycoord.dec.to_string(u.degree), skycoord.ra.deg, skycoord.dec.deg, obs.rms, obs.ncands), fontsize=12)
 
     fig.savefig(path.format(obs.obsid, f'candidate_{candidate["cand_id"]}.png'), bbox_inches="tight")
     plt.close(fig)

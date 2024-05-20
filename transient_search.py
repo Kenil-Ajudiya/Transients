@@ -16,18 +16,20 @@ from glob import glob
 import matplotlib.pyplot as plt
 
 class Observation:
-    obsid = None
-    data = None
-    header = None
-    time = None
-    shape = None
-    wcs = None
-    freq = None
-    tstep = None
-    cent = None
-    fov = None
-    rms = None
-    mean = None
+    def __init__(self, path, obsid, obs_name):
+        self.obsid = obsid
+        self.data, self.header = io.ReadImage(path.format(self.obsid, obs_name))
+        self.time  = Time(int(self.obsid), format='gps').utc.iso
+        self.shape = self.data.shape
+        self.wcs   = io.ObsWCS(self.header)
+        self.freq  = self.header["FREQ"]
+        self.tstep = self.header['TIMESTEP']
+        self.cent  = self.wcs.pixel_to_world(self.header["NAXIS1"]/2, self.header["NAXIS2"]/2)
+        self.cent  = SkyCoord(self.cent.ra.value, self.cent.dec.value, unit = (u.deg, u.deg), frame = "fk5")
+        self.fov   = np.sqrt(2) * self.header["CDELT2"] * max(self.header["NAXIS1"], self.header["NAXIS2"]) / 2
+        self.rms   = np.std(self.data)
+        self.mean  = np.mean(self.data)
+        self.ncands = None
 
 class Filter:
     def __init__(self, name, cut_low, cut_high, scale_rms, func, *args):
@@ -41,9 +43,10 @@ class Filter:
         self.args = args
         self.scale_rms = scale_rms
 
-    def apply(self, cube):
+    def apply(self, cube, rms=None):
         if self.scale_rms:
-            rms = np.std(cube)
+            if rms is None:
+                rms = np.std(cube)
             self.cut_low = self.cut_low_unscaled * rms
             self.cut_high = self.cut_high_unscaled * rms
         else:
@@ -52,20 +55,8 @@ class Filter:
         self.data = self.func(cube, *self.args)
 
 
-def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
-    obs = Observation()
-    obs.obsid = obsid
-    obs.data, obs.header = io.ReadImage(path.format(obs.obsid, 'transient.hdf5'))
-    obs.time  = Time(int(obs.obsid), format='gps').utc.iso
-    obs.shape = obs.data.shape
-    obs.wcs   = io.ObsWCS(obs.header)
-    obs.freq  = obs.header["FREQ"]
-    obs.tstep = obs.header['TIMESTEP']
-    obs.cent  = obs.wcs.pixel_to_world(obs.header["NAXIS1"]/2, obs.header["NAXIS2"]/2)
-    obs.cent  = SkyCoord(obs.cent.ra.value, obs.cent.dec.value, unit = (u.deg, u.deg), frame = "fk5")
-    obs.fov   = np.sqrt(2) * obs.header["CDELT2"] * max(obs.header["NAXIS1"], obs.header["NAXIS2"]) / 2
-    obs.rms   = np.std(obs.data)
-    obs.mean  = np.mean(obs.data)
+def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, obs_name='transient.hdf5', max_plots=10):
+    obs = Observation(path, obsid, obs_name)
 
     # Ignoring high RMS frames
 
@@ -82,7 +73,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
     
     if save_filtered:
         for flr in filters:
-            io.WriteImage(path.format(obs.obsid, flr.data, obs.header, flr.name))
+            io.WriteImage(path.format(obs.obsid, run_name+'_'+flr.name), flr.data, obs.header, flr.name)
 
     # Detect islands
     isl_table, isl_labels, isl_slices = isl.FindIslands(obs, filters, True)
@@ -91,23 +82,25 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered):
     knw_table = knw.FindKnownSources(obs, os.getenv('GGSM', '~/GLEAM-X-pipeline/models/GGSM.fits'), filters)
     cm.CrossMatch(isl_table, knw_table, obs)
 
-    isl_table_selected = sel.SelectSources(isl_table, isl_labels, filters)
+    isl_table_selected = sel.SelectSources(obs, isl_table, isl_labels, filters)
 
-    print(len(isl_table), '->', len(isl_table_selected), flush=True)
+    print('obsid:', obsid, '    freq:', obs.freq, '    rms:', obs.rms, '    pointing:', obs.cent.ra.to_string(u.hour), obs.cent.dec.to_string(u.degree))
+    print('candidates', len(isl_table), '->', len(isl_table_selected), flush=True)
     for flr in filters:
         print(flr.name, np.count_nonzero(isl_table['valid_'+flr.name]), '->', np.count_nonzero(isl_table_selected['valid_'+flr.name]), flush=True)
 
     # knw_table.write(path.format(obsid, 'known.fits'), format='fits', overwrite=True)
     isl_table.write(path.format(obsid, run_name+'_islands.fits'), format='fits', overwrite=True)
     isl_table_selected.write(path.format(obsid, run_name+'_islands_selected.fits'), format='fits', overwrite=True)
-
+    obs.ncands = f'{len(isl_table_selected)} / {len(isl_table)}'
+    
     if make_plots:
         # Removing old images
         oldfiles = glob(path.format(obs.obsid, 'candidate_*'))
         for f in oldfiles:
             os.remove(f)
 
-        if len(isl_table_selected) <= 10:
+        if len(isl_table_selected) <= max_plots:
             for candidate in isl_table_selected:
                 diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels)
 

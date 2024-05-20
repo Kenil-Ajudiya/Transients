@@ -2,6 +2,7 @@ from transient_search import *
 import pandas as pd
 import os
 import numpy as np
+from astropy.table import Table
 
 obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
 path = '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_{1}'
@@ -33,10 +34,17 @@ filters = [
     Filter('spike', 5.5, 8, False, fil.Spike, 4),
     Filter('rms'  , 2.0, 3, True , fil.RMS)]
 
+# path = '/home/septagonic/Documents/Transients/investigation/J0504_3806/{0}/{0}_{1}'
+
+# for obsid in [1287081384]:
 for obsid in obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
-    cands = TransientSearch(path, obsid, filters, 'mod', False)
-    os.system(f'cp {path.format(obsid, "*.png")} {path.format(obsid, "*.gif")} ./candidates')
-    if len(cands) > 10:
-        os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
+    # cands = TransientSearch(path, obsid, filters, 'mod_2', False, False, 'modcube.fits')
+    # cands = TransientSearch(path, obsid, filters, 'real', False, False, max_plots=1000)
+    # os.system(f'cp {path.format(obsid, "*.png")} {path.format(obsid, "*.gif")} ./candidates')
+    # if len(cands) > 10:
+    #     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
+    islands = Table.read(path.format(obsid, 'real_islands.fits'))
+    obs = Observation(path, obsid, 'transient.hdf5')
+    cands = sel.SelectSources(obs, isl_table, isl_labels, filters)

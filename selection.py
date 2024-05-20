@@ -5,8 +5,10 @@ from astropy.coordinates import match_coordinates_sky
 from astropy import units as u
 from astropy.table import Column
 import os
+from astropy.time import Time
+from astropy.coordinates import get_body, EarthLocation
 
-def SelectSources(table, labels, filters):
+def SelectSources(obs, table, labels, filters):
     min_beam = 0.5              # Minimum beam value normalised by the central beam values
     min_radius = 4*u.arcmin     # Minimum radius to classify as scintillation
     radius_coef = 2             # max(table['maj_rad_deg'] * radius_coef, min_radius) is used to classify scintillation
@@ -18,10 +20,7 @@ def SelectSources(table, labels, filters):
     max_majmin = 2              # maximum allowed ratio between the major and minor radii
     flux_ratio = 1.5            # minimum ratio between candidate peak flux and nearest known source flux if within min_radius
 
-    # Find candidates with small area, and remove them from labels (to stop them being drawn on the contour map)
-    invalid_area = table['area_pix'] < min_area # Do I have invalid area?
-    for idx in np.nonzero(invalid_area)[0]:
-        labels[labels == table['cand_id'][idx]] = 0
+    cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 
     # Is my normalised beam value too small?
     invalid_beam = table['beam_norm'] < min_beam
@@ -31,8 +30,8 @@ def SelectSources(table, labels, filters):
     min_rad_far = min_rad_close * radius_coef
     scintil_dist = np.zeros(len(table), dtype=bool) # Am I too close to a nearby known source with greater flux?
     scintil_corr = np.zeros(len(table), dtype=bool) # Am I too correlated with a nearby known source with greater flux?
-    for name in ['nks1', 'nks2']:
-        smaller_flux = table['peak_flux'] < table[name+'_flux'] * flux_ratio
+    for name in ['nks', 'nks2']:
+        smaller_flux = table['peak_flux'] < table[name+'_flux'] * flux_ratio * table['beam']
         scintil_dist |= (table[name+'_sep_deg'] < min_rad_close) & smaller_flux
         scintil_corr |= ((table[name+'_sep_deg'] < min_rad_far) & (np.abs(table[name+'_corr']) > min_corr)) & smaller_flux
 
@@ -41,28 +40,36 @@ def SelectSources(table, labels, filters):
 
     # Am I too close to super bright A-team source?
     cat_bright = SkyCoord(["23h23m24.000s", "19h59m28.35663s", "05h34m31.94s", "12h30m49.42338s", "05h19m49.7229s", "16h51m11.4s", "09h18m05.651s", "13h25m27.600s"], ["+58d48m54.00s", "+40d44m02.0970s", "+22d00m52.2s", "+12d23m28.0439s", "-45d46m43.853s", "+04d59m20s", "-12d05m43.99s", "-43d01m09s"])
-    cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
     idx, sep, _ = match_coordinates_sky(cat_cands, cat_bright)
     close_to_ateam = sep < min_rad_ateam
 
     # Am I too close to bright source?
     cat_bright = SkyCoord(ref_cat['RAJ2000'][ref_cat['S_200']*u.Jy>min_flux_bright], ref_cat['DEJ2000'][ref_cat['S_200']*u.Jy>min_flux_bright], unit=(u.deg, u.deg), frame="fk5")
-    cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
     idx, sep, _ = match_coordinates_sky(cat_cands, cat_bright)
     close_to_bright = sep < min_rad_bright
 
     # Detecting extended stripe islands
-    invalid_majmin = table['maj_rad_pix'] > (table['min_rad_pix'] * max_majmin)
+    invalid_majmin = (table['maj_rad_pix'] > (table['min_rad_pix'] * max_majmin)) & (table['area_pix'] > min_area)
+
+    # Detecting the moon and jupiter
+    time = Time(int(obs.obsid), format='gps')
+    MWA = EarthLocation(lat=-26.70331940, lon=116.67081524)
+    moon = get_body('moon', time, MWA)
+    jupiter = get_body('jupiter', time, MWA)
+    is_moon = moon.separation(cat_cands) < 0.5*u.deg
+    is_jupiter= jupiter.separation(cat_cands) < min_radius
 
     # Adding removal justifications to candidate table
     table.add_columns([
-        Column(data=invalid_area   , name='invalid_area'),
+    #     Column(data=invalid_area   , name='invalid_area'),
         Column(data=invalid_beam   , name='invalid_beam'),
         Column(data=invalid_majmin , name='invalid_majmin'),
         Column(data=scintil_dist   , name='scintil_dist'),
         Column(data=scintil_corr   , name='scintil_corr'),
         Column(data=close_to_ateam , name='close_to_ateam'),
-        Column(data=close_to_bright, name='close_to_bright')
+        Column(data=close_to_bright, name='close_to_bright'),
+        Column(data=is_moon        , name='is_moon'),
+        Column(data=is_jupiter     , name='is_jupiter')
     ])
 
     # Determine whether the candidate's filter value is valid for each filter
@@ -73,7 +80,8 @@ def SelectSources(table, labels, filters):
         table.add_column(Column(data=valid_filter, name='valid_'+flr.name))
 
     # Oring everything together
-    invalid = invalid_area | invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin
+    # invalid = invalid_area | invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
+    invalid = invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
     new_table = table[~invalid]
 
     combined = np.zeros(len(new_table), dtype=bool)
@@ -87,4 +95,6 @@ def SelectSources(table, labels, filters):
                     labels[labels == new_table['cand_id'][j]] = labels[new_table['y_pix'][j], new_table['x_pix'][i]]
 
     return new_table[~combined]
+
+    return new_table
     

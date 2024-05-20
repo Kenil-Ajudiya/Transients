@@ -19,12 +19,13 @@ def FindIslands(obs, filters, get_beam=True):
 
     # Building table
     table = Table([
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='obs_id'        , unit=None    ),
+        Column(data=np.zeros( n               , dtype=np.dtype('<S20')), name='obs_id'        , unit=None    ),
+        Column(data=np.zeros( n               , dtype=np.dtype('<S20')), name='filter_id'     , unit=None    ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='cand_id'       , unit=None    ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='x_pix'         , unit=u.pix   ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='y_pix'         , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='cent_x_pix'    , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='cent_y_pix'    , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_x_pix'    , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_y_pix'    , unit=u.pix   ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='box_w_pix'     , unit=u.pix   ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='box_h_pix'     , unit=u.pix   ),
         Column(data=np.zeros( n               , dtype=np.float64), name='min_rad_pix'   , unit=u.pix   ),
@@ -36,7 +37,7 @@ def FindIslands(obs, filters, get_beam=True):
         Column(data=np.zeros( n               , dtype=np.float64), name='dec_deg'       , unit=u.deg   ),
         Column(data=np.zeros( n               , dtype=np.float64), name='cent_ra_deg'   , unit=u.deg   ),
         Column(data=np.zeros( n               , dtype=np.float64), name='cent_dec_deg'  , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='obs_sep_deg'   , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_sep_deg'   , unit=u.deg   ),
         Column(data=np.zeros( n               , dtype=np.int64  ), name='area_pix'      , unit=u.pix**2),
         Column(data=np.zeros( n               , dtype=np.float64), name='area_deg'      , unit=u.deg**2),
         Column(data=np.zeros( n               , dtype=np.float64), name='peak_flux'     , unit=u.Jy    ),
@@ -49,8 +50,9 @@ def FindIslands(obs, filters, get_beam=True):
        [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name        , unit=None    ) for flr in filters] +
        [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name+'_norm', unit=None    ) for flr in filters])
 
-    table['obs_id'][:] = obs.obsid
+    table['obs_id'][:] = str(obs.obsid)
     table['obs_cent_freq'][:] = obs.freq
+    table['filter_id'][:] = '_'.join([flr.name for flr in filters])
 
     # getting island attributes
     for i in range(n):
@@ -105,7 +107,7 @@ def FindIslands(obs, filters, get_beam=True):
         table['dec_deg'][i] = skycoord.dec.degree
         if np.isnan(table['ra_deg'][i]) or np.isnan(table['dec_deg'][i]):
             continue
-        table['obs_sep_deg'][i] = obs.cent.separation(skycoord).degree
+        table['cent_sep_deg'][i] = obs.cent.separation(skycoord).degree
         # Converting island dimentions to degrees
         testX = pixel_to_skycoord(table['cent_x_pix'][i] + 1, table['cent_y_pix'][i], obs.wcs)
         testY = pixel_to_skycoord(table['cent_x_pix'][i], table['cent_y_pix'][i] + 1, obs.wcs)

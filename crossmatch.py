@@ -9,9 +9,9 @@ def CrossMatch(cands, known, obs, radius=4*u.arcmin):
     known_coord = SkyCoord(known['ra_deg'], known['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 
     cands.add_columns([
-        Column(data=np.zeros(len(cands), dtype=np.int64)  , name='nks1_idx'    , unit=None),
+        Column(data=np.zeros(len(cands), dtype=np.int64)  , name='nks_idx'    , unit=None),
         Column(data=np.zeros(len(cands), dtype=np.int64)  , name='nks2_idx'    , unit=None),
-        Column(data=np.zeros(len(cands), dtype=np.float64), name='nks1_sep_deg', unit=u.deg),
+        Column(data=np.zeros(len(cands), dtype=np.float64), name='nks_sep_deg', unit=u.deg),
         Column(data=np.zeros(len(cands), dtype=np.float64), name='nks2_sep_deg', unit=u.deg)])
 
     for i in range(len(cands)):
@@ -30,13 +30,13 @@ def CrossMatch(cands, known, obs, radius=4*u.arcmin):
             bright_idx = sepsort[0]
             close_idx = sepsort[1]
         # Store the match index and separation in the candidate table
-        cands['nks1_idx'][i] = bright_idx
-        cands['nks1_sep_deg'][i] = sep[bright_idx].deg
+        cands['nks_idx'][i] = bright_idx
+        cands['nks_sep_deg'][i] = sep[bright_idx].deg
         cands['nks2_idx'][i] = close_idx
         cands['nks2_sep_deg'][i] = sep[close_idx].deg
     
     # Copying data of known sources to the candidate table
-    for nks in ['nks1', 'nks2']:
+    for nks in ['nks', 'nks2']:
         # Copying fields from the known table to the cands table, with prefix added to column names
         for cname in known.colnames:
             cands[f'{nks}_{cname}'] = known[cname][cands[f'{nks}_idx']]
@@ -55,12 +55,15 @@ def CrossMatch(cands, known, obs, radius=4*u.arcmin):
             curve2 = cands['curve'][i] - cands['curve'][i].mean()
             corr[i] = np.sum(curve1 * curve2) / np.sqrt(np.sum(curve1**2) * np.sum(curve2**2))
 
+        flux_rat = cands['peak_flux'] / cands[f'{nks}_flux']
+
         # Add results to the candidate table
         cands.add_columns([
-            Column(data=curves             , name=f'{nks}_curve', unit=u.Jy),
-            Column(data=corr               , name=f'{nks}_corr' , unit=None),
-            Column(data=curves.max(axis=1) , name=f'{nks}_max'  , unit=u.Jy),
-            Column(data=curves.mean(axis=1), name=f'{nks}_mean' , unit=u.Jy)])
+            Column(data=curves             , name=f'{nks}_curve'   , unit=u.Jy),
+            Column(data=corr               , name=f'{nks}_corr'    , unit=None),
+            Column(data=curves.max(axis=1) , name=f'{nks}_max'     , unit=u.Jy),
+            Column(data=curves.mean(axis=1), name=f'{nks}_mean'    , unit=u.Jy),
+            Column(data=flux_rat           , name=f'{nks}_flux_rat', unit=None)])
 
 def RoundInt(vals, minval, maxval):
     result = np.rint(vals).astype(np.int64)

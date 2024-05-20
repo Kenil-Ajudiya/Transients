@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.signal as sig
 
 # generates n-d gaussian. std and shape must be same length
 def Gaussian(std, shape):
@@ -15,3 +16,13 @@ def Gaussian(std, shape):
     std = np.reshape(std, std_shape)
 
     return np.exp(-np.sum((coords / std)**2, axis=0) / 2)
+
+def SmoothNoise(std, shape):
+    std = np.array(std, ndmin=1)
+    shape = np.array(shape, ndmin=1)
+    window = Gaussian(std, 1 + std * 6)
+    window /= np.sqrt(np.sum(window**2))
+    
+    noise = sig.convolve(np.random.normal(0, 1, shape), window, 'same')
+    
+    return noise

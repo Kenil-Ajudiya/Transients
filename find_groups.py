@@ -8,30 +8,46 @@ from astropy.table import Table
 from astropy.table import vstack
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
+import os
 
-obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
+# obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
+# fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
+
+fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
+
+# obslist = pd.read_csv('100_obs.csv')
+# fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]
+
+invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
+filter_bool_names = ['valid_spike']
+
 table_list = []
-
-for obsid in obslist.obsid:
-    table_list.append(Table.read(f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits', format='fits'))
+for fname in fname_list:
+    data = Table.read(fname, format='fits')
+    data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+    data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+    table_list.append(data)
 
 data = vstack(table_list)
+data = data[data['obs_cent_freq'] > 100e6]
+data = data[data['nks1_sep_deg'] > 0.1]
+data = data[data['nks2_sep_deg'] > 0.1]
 cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
 marked = np.zeros(len(data), dtype=bool)
 groups = []
-match_sep = 0.0666667 * 2
+match_sep = 4*u.arcmin
 
 # Finding groups of candidates
 for i in range(len(data)):
     if not marked[i]:
         marked[i] = True
-        group = [data[i]]
+        group = [{'cand':data[i], 'sep':0}]
         j = i
         # While I have not visited you before, and you are close, add to group
-        while (not marked[idx[j]]) and (sep[j] < match_sep*u.deg):
+        while (not marked[idx[j]]) and (sep[j] < match_sep):
             j = idx[j]
-            group.append(data[j])
+            group.append({'cand':data[j], 'sep':sep[j].arcmin})
             marked[j] = True
         # Add group to list of groups if they originate from at least 2 obsids
         # group_obsids = [x['obs_id'] for x in group]
@@ -39,14 +55,26 @@ for i in range(len(data)):
         #     groups.append(group)
         groups.append(group)
 
-group_lengths = [len(x) for x in groups]
+group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for group in groups]
 sort_idx = np.argsort(group_lengths)
 groups = [groups[i] for i in sort_idx]
 for group in groups:
     if len(group) > 1:
         for row in group:
-            print(row['obsid'], row['can_idx'], int(row['cent_freq']/1e6))
+            cand = row['cand']
+            coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
+            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree)]
+            print(' '.join([f'{str(x):20.20}' for x in print_vals]))
         print('--------------------------')
+
+# valid = data['obs_cent_freq'] > 120e6
+valid = (data['cand_id'] < 1000) & (data['nks1_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
+data = data[valid]
+flux_sort = np.argsort(data['peak_flux'])
+for i in flux_sort:
+    print(data[i]['obs_id'], data[i]['cand_id'], data[i]['peak_flux'])
+
+exit()
 
 ncands = np.array([len(x) for x in table_list])
 bins=np.arange(np.max(ncands)+2)
