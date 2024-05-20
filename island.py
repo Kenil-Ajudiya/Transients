@@ -19,36 +19,36 @@ def FindIslands(obs, filters, get_beam=True):
 
     # Building table
     table = Table([
-        Column(data=np.zeros( n               , dtype=np.dtype('<S20')), name='obs_id'        , unit=None    ),
-        Column(data=np.zeros( n               , dtype=np.dtype('<S20')), name='filter_id'     , unit=None    ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='cand_id'       , unit=None    ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='x_pix'         , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='y_pix'         , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='cent_x_pix'    , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='cent_y_pix'    , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='box_w_pix'     , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='box_h_pix'     , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='min_rad_pix'   , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='maj_rad_pix'   , unit=u.pix   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='min_rad_deg'   , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='maj_rad_deg'   , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='rot_deg'       , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='ra_deg'        , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='dec_deg'       , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='cent_ra_deg'   , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.float64), name='cent_dec_deg'  , unit=u.deg   ),
+        Column(data=np.zeros( n         , dtype=np.dtype('<S20')), name='obs_id'         , unit=None    ),
+        Column(data=np.zeros( n         , dtype=np.dtype('<S20')), name='filter_id'      , unit=None    ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='cand_id'        , unit=None    ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='x_pix'          , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='y_pix'          , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_x_pix'     , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_y_pix'     , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='box_w_pix'      , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='box_h_pix'      , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='min_rad_pix'    , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='maj_rad_pix'    , unit=u.pix   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='min_rad_deg'    , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='maj_rad_deg'    , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='rot_deg'        , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='ra_deg'         , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='dec_deg'        , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_ra_deg'    , unit=u.deg   ),
+        Column(data=np.zeros( n               , dtype=np.float64), name='cent_dec_deg'   , unit=u.deg   ),
         Column(data=np.zeros( n               , dtype=np.float64), name='cent_sep_deg'   , unit=u.deg   ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='area_pix'      , unit=u.pix**2),
-        Column(data=np.zeros( n               , dtype=np.float64), name='area_deg'      , unit=u.deg**2),
-        Column(data=np.zeros( n               , dtype=np.float64), name='peak_flux'     , unit=u.Jy    ),
-        Column(data=np.zeros( n               , dtype=np.int64  ), name='peak_frame'    , unit=None    ),
-        Column(data=np.ones(  n               , dtype=np.float64), name='beam'          , unit=None    ),
-        Column(data=np.ones(  n               , dtype=np.float64), name='beam_norm'     , unit=None    ),
-        Column(data=np.ones(  n               , dtype=np.float64), name='obs_cent_freq' , unit=u.Hz    ),
-        Column(data=np.ones(  n               , dtype=np.float64), name='det_stat'      , unit=u.Hz    ),
-        Column(data=np.zeros((n, obs.shape[0]), dtype=np.float64), name='curve'         , unit=u.Jy    )] +
-       [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name        , unit=None    ) for flr in filters] +
-       [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name+'_norm', unit=None    ) for flr in filters])
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='area_pix'       , unit=u.pix**2),
+        Column(data=np.zeros( n               , dtype=np.float64), name='area_deg'       , unit=u.deg**2),
+        Column(data=np.zeros( n               , dtype=np.float64), name='peak_flux'      , unit=u.Jy    ),
+        Column(data=np.zeros( n               , dtype=np.int64  ), name='peak_frame'     , unit=None    ),
+        Column(data=np.ones(  n               , dtype=np.float64), name='beam'           , unit=None    ),
+        Column(data=np.ones(  n               , dtype=np.float64), name='beam_norm'      , unit=None    ),
+        Column(data=np.ones(  n               , dtype=np.float64), name='obs_cent_freq'  , unit=u.Hz    ),
+        Column(data=np.ones(  n               , dtype=np.float64), name='det_stat'       , unit=u.Hz    ),
+        Column(data=np.zeros((n, obs.shape[0]), dtype=np.float64), name='curve'          , unit=u.Jy    )] +
+       [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name         , unit=None    ) for flr in filters] +
+       [Column(data=np.zeros( n               , dtype=np.float64), name=flr.name+'_norm' , unit=None    ) for flr in filters])
 
     table['obs_id'][:] = str(obs.obsid)
     table['obs_cent_freq'][:] = obs.freq

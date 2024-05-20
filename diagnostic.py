@@ -39,7 +39,7 @@ def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle,
     else:
         ax.coords['dec'].set_ticklabel_visible(False)
     # ax.plot(candidate['ra_deg'] , candidate['dec_deg'] , 'xb', transform=ax.get_transform('world'))
-    ax.contour(isl_labels, levels=0, linewidths=0.5, colors=['blue'])#, extent=im.get_extent())
+    ax.contour(isl_labels, levels=0, linewidths=0.5, colors=['blue'], extent=im.get_extent())
     for p in pulsars:
         ax.scatter(p["RAJ2000"], p["DEJ2000"], marker='o', facecolors='none', edgecolors='green', transform=ax.get_transform('world'))
         ax.text(p["RAJ2000"]+0.03, p["DEJ2000"]+0.03, "PSR{0}".format(p["PSRJ"]), color="green", transform=ax.get_transform('world'))
