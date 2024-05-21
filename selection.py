@@ -84,17 +84,17 @@ def SelectSources(obs, table, labels, filters):
     invalid = invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
     new_table = table[~invalid]
 
-    combined = np.zeros(len(new_table), dtype=bool)
-    for i in np.flip(np.argsort(new_table['peak_flux'])):
-        for j in np.nonzero(~combined)[0]:
-            if j > i:
-                corr = np.sum(new_table['curve'][j] * new_table['curve'][i]) /\
-                    np.sqrt(np.sum(new_table['curve'][j]**2) * np.sum(new_table['curve'][i]**2))
-                if corr > min_corr:
-                    combined[j] = True
-                    labels[labels == new_table['cand_id'][j]] = labels[new_table['y_pix'][j], new_table['x_pix'][i]]
+    # combined = np.zeros(len(new_table), dtype=bool)
+    # for i in np.flip(np.argsort(new_table['peak_flux'])):
+    #     for j in np.nonzero(~combined)[0]:
+    #         if j > i:
+    #             corr = np.sum(new_table['curve'][j] * new_table['curve'][i]) /\
+    #                 np.sqrt(np.sum(new_table['curve'][j]**2) * np.sum(new_table['curve'][i]**2))
+    #             if corr > min_corr:
+    #                 combined[j] = True
+    #                 labels[labels == new_table['cand_id'][j]] = labels[new_table['y_pix'][j], new_table['x_pix'][i]]
 
-    return new_table[~combined]
+    # return new_table[~combined]
 
     return new_table
     

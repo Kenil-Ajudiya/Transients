@@ -1,6 +1,7 @@
 from transient_search import *
 import os
 import sys
+import gc
 
 start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
@@ -37,3 +38,4 @@ for obsid in obsids[start_idx:end_idx]:
                 os.system(f'rm -r ~/candidates/{obsid}')
     except Exception as e:
         print(e)
+    gc.collect()
