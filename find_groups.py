@@ -15,7 +15,7 @@ import sys
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
 
 # fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
-fname_list = [sys.argv[1] + '/' + fname for fname in os.listdir(sys.argv[1])]
+fname_list = [f'{sys.argv[1]}/{fname}/{fname}_{sys.argv[2]}' for fname in os.listdir(sys.argv[1])]
 
 # obslist = pd.read_csv('100_obs.csv')
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]
