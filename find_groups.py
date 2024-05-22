@@ -25,7 +25,11 @@ filter_bool_names = ['valid_spike']
 
 table_list = []
 for fname in fname_list:
-    data = Table.read(fname, format='fits')
+    try:
+        data = Table.read(fname, format='fits')
+        print(f'{fname} read')
+    except FileNotFoundError:
+        print(f'{fname} not found')
     data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
     data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
     table_list.append(data)
