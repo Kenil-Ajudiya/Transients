@@ -9,11 +9,13 @@ from astropy.table import vstack
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import os
+import sys
 
 # obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
 
-fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
+# fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
+fname_list = [sys.argv[1] + '/' + fname for fname in os.listdir(sys.argv[1])]
 
 # obslist = pd.read_csv('100_obs.csv')
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]

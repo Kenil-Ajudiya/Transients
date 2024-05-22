@@ -201,10 +201,13 @@ if __name__=='__main__':
     counts = np.array([np.count_nonzero(data['obs_id'].astype(np.int64) == obsid) for obsid in obsids])
     print(counts)
     x = np.arange(len(counts))
+    colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
+    bruh = 0
     for freq in freq_unique:
         subset = freqs == freq
-        plt.bar(x[subset], counts[subset], label=f'{int(freq/1e6)} MHz')
+        plt.bar(x[subset], counts[subset], label=f'{int(freq/1e6)} MHz', color=colors[bruh])
         plt.hlines(np.mean(counts[subset]), np.min(x[subset]), np.max(x[subset]), colors='k', linestyles='--')
+        bruh += 1
         # if freq < np.max(freq_unique):
         #     plt.axvline(np.max(x[subset])+0.5, linestyle=':', color='k')
     plt.xticks(np.arange(len(counts)), obsids, rotation=90, fontsize='small')
@@ -221,53 +224,47 @@ if __name__=='__main__':
         plt.figure(figsize=(5.5, 3.5))
         plt.subplot(1, 2, 1)
         freq_list = np.unique(obslist['freq'])
-        hist, bins = np.histogram(data['mod_flux'], bins=20)
+        bins = np.geomspace(0.2, 3, 11, True)
+        hist, bins = np.histogram(data['mod_flux'], bins=bins)
         hist_all, _ = np.histogram(mod_data['flux'], bins=bins)
         plt.stairs(hist/hist_all, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
-        # norm = col.Normalize()
-        # colors = plt.cm.jet(norm(freq_list))
-        colors = ['blue', 'orange', 'green', 'red', 'purple']
+        # Full data set
+        colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
         for i in range(len(freq_list)):
             hist, _ = np.histogram(data['mod_flux'][data['obs_cent_freq'] == freq_list[i]], bins=bins)
             hist_all, _ = np.histogram(mod_data['flux'][mod_data['obs_cent_freq'] == freq_list[i]], bins=bins)
             plt.stairs(hist/hist_all, edges=bins, label=f'{int(freq_list[i]/1e6)} MHz', lw=1, color=colors[i])
-        plt.legend()
+        plt.legend(loc='lower right')
+        plt.xscale('log')
         plt.yscale('log')
         plt.xlabel('Peak flux (Jy)')
         plt.ylabel('Fraction of modelled transients recovered')
         plt.yticks(ticks=[0.01, 0.1, 1], labels=['1%', '10%', '100%'])
-        # Pulse width histoigram (split by peak flux)
-        '''
-        plt.subplot(1, 2, 2)
-        flux_bins = np.array([0, 1, 2, 3])
-        hist, bins = np.histogram(data['mod_dur'], density=True, bins=20)
-        plt.stairs(hist, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
-        norm = col.Normalize()
-        colors = plt.cm.jet(norm(flux_bins))
-        for i in range(len(flux_bins)-1):
-            hist, _ = np.histogram(data['mod_dur'][(flux_bins[i] < data['mod_flux']) & (data['mod_flux'] <= flux_bins[i+1])], bins=bins, density=True)
-            plt.stairs(hist, edges=bins, label=f'{flux_bins[i]} < peak flux < {flux_bins[i+1]}', lw=1, color=colors[i])
-        plt.legend()
-        plt.yscale('log')
-        plt.xlabel('Modelled transient pulse width')
-        plt.ylabel('Fraction of modelled transients recovered')
-        plt.yticks(ticks=[0.01, 0.1, 1], labels=['1%', '10%', '100%'])
-        plt.tight_layout()
-        '''
+
         # Peak flux histogram (split by filter)
         plt.subplot(1, 2, 2)
+        colors = ['blue', 'orange', 'green', 'red', 'purple']
         # data = data[data['mod_flux'] < 1]
         # mod_data = mod_data[mod_data['flux'] < 1]
         filters = np.array(['valid_tcg', 'valid_spike', 'valid_rms'])
-        hist, bins = np.histogram(data['mod_dur'], bins=20)
+        bins = np.geomspace(0.1, 5, 11, True)
+        hist, bins = np.histogram(data['mod_dur'], bins=bins)
         hist_all, _ = np.histogram(mod_data['dur'], bins=bins)
-        plt.stairs(hist/hist_all, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
+        plt.stairs(hist/hist_all, edges=bins*4, label=f'Overall', alpha=0.5, fill=True, lw=2)
+        # Full data set
         for i in range(len(filters)):
             hist, _ = np.histogram(data['mod_dur'][data[filters[i]]], bins=bins)
-            plt.stairs(hist/hist_all, edges=bins, label=filters[i], lw=1)
-        plt.legend()
+            plt.stairs(hist/hist_all, edges=bins*4, label=filters[i], lw=1, color=colors[i])
+        # Dim data set
+        hist_all, _ = np.histogram(mod_data['dur'][mod_data['flux'] < .5], bins=bins)
+        for i in range(len(filters)):
+            hist, _ = np.histogram(data['mod_dur'][data[filters[i]] & (data['mod_flux'] < .5)], bins=bins)
+            plt.stairs(hist/hist_all, edges=bins*4, lw=1, color=colors[i], ls='--')
+        plt.plot([0, 0], [0.01, 0.01], 'k--', label=f'flux<0.5Jy')
+        plt.legend(loc='lower right')
+        plt.xscale('log')
         plt.yscale('log')
-        plt.xlabel('Pulse width (frames)')
+        plt.xlabel('Pulse σ (s)')
         # plt.ylabel('Fraction of modelled transients recovered')
         plt.yticks([])
         plt.tight_layout()
