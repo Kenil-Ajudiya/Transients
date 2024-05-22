@@ -74,8 +74,8 @@ for group in groups:
         print('--------------------------')
 
 # valid = data['obs_cent_freq'] > 120e6
-valid = (data['cand_id'] < 1000) & (data['nks1_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
-data = data[valid]
+# valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
+# data = data[valid]
 flux_sort = np.argsort(data['peak_flux'])
 for i in flux_sort:
     print(data[i]['obs_id'], data[i]['cand_id'], data[i]['peak_flux'])
