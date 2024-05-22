@@ -35,9 +35,9 @@ for fname in fname_list:
         print(f'{fname} not found')
 
 data = vstack(table_list)
-data = data[data['obs_cent_freq'] > 100e6]
-data = data[data['nks1_sep_deg'] > 0.1]
-data = data[data['nks2_sep_deg'] > 0.1]
+# data = data[data['obs_cent_freq'] > 100e6]
+# data = data[data['nks1_sep_deg'] > 0.1]
+# data = data[data['nks2_sep_deg'] > 0.1]
 cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
 marked = np.zeros(len(data), dtype=bool)
@@ -76,9 +76,9 @@ for group in groups:
 # valid = data['obs_cent_freq'] > 120e6
 # valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
 # data = data[valid]
-flux_sort = np.argsort(data['peak_flux'])
-for i in flux_sort:
-    print(data[i]['obs_id'], data[i]['cand_id'], data[i]['peak_flux'])
+# flux_sort = np.argsort(data['peak_flux'])
+# for i in flux_sort:
+#     print(data[i]['obs_id'], data[i]['cand_id'], data[i]['peak_flux'])
 
 exit()
 
