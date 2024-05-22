@@ -28,11 +28,11 @@ for fname in fname_list:
     try:
         data = Table.read(fname, format='fits')
         print(f'{fname} read')
+        data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+        data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+        table_list.append(data)
     except FileNotFoundError:
         print(f'{fname} not found')
-    data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
-    data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
-    table_list.append(data)
 
 data = vstack(table_list)
 data = data[data['obs_cent_freq'] > 100e6]
