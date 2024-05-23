@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --mem=32gb
 #SBATCH --ntasks-per-node=1
-#SBATCH --output=/scratch/pawsey0272/chorvath/out/%A
+#SBATCH --output=/scratch/pawsey0272/chorvath/out/%A_%a
 
 module load singularity/3.11.4-slurm
 export export SINGULARITY_BINDPATH=`pwd`:$HOME,/tmp
