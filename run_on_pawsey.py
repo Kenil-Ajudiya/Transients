@@ -29,7 +29,7 @@ for obsid in obsids[start_idx:end_idx]:
             os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_transient.hdf5 {1}'.format(obsid, cube_fname))
             if os.path.isfile(cube_fname):
                 cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=15)
-                if len(cands) > 15:
+                if len(cands) > 10:
                     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
                 os.system(f'rm {cube_fname}')
                 if os.path.isfile(path.format(obsid, "deep-MFS-image-pb.fits")):

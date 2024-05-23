@@ -1,8 +1,8 @@
 #!/bin/bash -l
 #SBATCH --account=pawsey0272
 #SBATCH --partition=work
-#SBATCH --array=0-950:50
-#SBATCH --time=03:00:00
+#SBATCH --array=0-9500:50%20
+#SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --mem=32gb
 #SBATCH --ntasks-per-node=1
