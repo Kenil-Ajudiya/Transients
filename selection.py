@@ -77,8 +77,11 @@ def SelectSources(obs, table, labels, filters):
     valid_any_filter = np.zeros(len(table), dtype=bool)
     for flr in filters:
         cutoff = flr.cut_high
-        if obs.freq < 100e6 and flr.name != 'spike':
-            cutoff *= 1.5
+        if obs.freq < 150e6 and flr.name != 'spike':
+            if obs.freq < 100e6:
+                cutoff *= 1.5
+            else:
+                cutoff *= 1.25
         valid_filter = table[flr.name] > cutoff
         valid_any_filter |= valid_filter
         table.add_column(Column(data=valid_filter, name='valid_'+flr.name))
