@@ -37,14 +37,14 @@ filters = [
 # path = '/home/septagonic/Documents/Transients/investigation/J0504_3806/{0}/{0}_{1}'
 
 # for obsid in [1287081384]:
-for obsid in obsids:
+for obsid in [obsids[0]]:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
     # cands = TransientSearch(path, obsid, filters, 'mod_2', False, False, 'modcube.fits')
-    # cands = TransientSearch(path, obsid, filters, 'real', False, False, max_plots=1000)
+    cands = TransientSearch(path, obsid, filters, 'bruh', True, False, max_plots=1000)
     # os.system(f'cp {path.format(obsid, "*.png")} {path.format(obsid, "*.gif")} ./candidates')
     # if len(cands) > 10:
     #     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
-    islands = Table.read(path.format(obsid, 'real_islands.fits'))
-    obs = Observation(path, obsid, 'transient.hdf5')
-    cands = sel.SelectSources(obs, isl_table, isl_labels, filters)
+    # islands = Table.read(path.format(obsid, 'real_islands.fits'))
+    # obs = Observation(path, obsid, 'transient.hdf5')
+    # cands = sel.SelectSources(obs, isl_table, isl_labels, filters)

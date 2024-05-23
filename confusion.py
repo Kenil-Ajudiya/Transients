@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import matplotlib.patches as patches
 import mplcursors
+import astropy.units as u
 
 ############################## Print Confusion Matrix ##############################
 
@@ -90,19 +91,20 @@ def CalcPerCategory(data, classes, catcol):
 def ReadTables(obslist, path):
     table_list = []
     for _, row in obslist.iterrows():
-        table_list.append(Table.read(path.format(int(row['obsid'])), format='fits'))
-        if 'obs_cent_freq' not in table_list[-1].colnames:
-            table_list[-1].add_column(np.full(len(table_list[-1]), row['freq']), name='obs_cent_freq')
+        table = Table.read(path.format(int(row['obsid'])), format='fits')
+        if 'obs_cent_freq' not in table.colnames:
+            table.add_column(np.full(len(table), row['freq']), name='obs_cent_freq')
+        table_list.append(table)
     return vstack(table_list), table_list
 
 if __name__=='__main__':
     # obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
     obslist = pd.read_csv('100_obs.csv')
     # run_name = 'mod_found'
-    prefix = 'mod_'
-    suffix = '_true'
-    # prefix = 'real_'
-    # suffix = ''
+    # prefix = 'mod_scint_'
+    # suffix = '_true'
+    prefix = 'real_'
+    suffix = ''
     cand_name = 'recovered modelled transients (of 100)'
     # cand_name = 'candidates'
 
@@ -110,6 +112,25 @@ if __name__=='__main__':
     data, table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_'+prefix+'islands'+suffix+'.fits')
     filter_bool_names = ['valid_tcg', 'valid_spike', 'valid_rms']
     invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright', 'is_moon']
+    data['valid_spike'] = data['spike_norm'] > 8.5/8
+    data['valid_tcg'] = data['tcg_norm'] > 7/8
+    data['valid_rms'] = data['rms_norm'] > 5/6
+    # Brooooooo ----------------------------------------------------------
+    # min_radius = 0.066666666
+    # flux_ratio = np.ones(len(data)) * 1
+    # flux_ratio[data['obs_cent_freq'] < 150e6] = 1.5
+    # flux_ratio[data['obs_cent_freq'] < 100e6] = 2.0
+    # min_rad_close = np.where(data['maj_rad_deg'] < min_radius, min_radius, data['maj_rad_deg'])
+    # min_rad_far = min_rad_close * 2
+    # scintil_dist = np.zeros(len(data), dtype=bool) # Am I too close to a nearby known source with greater flux?
+    # scintil_corr = np.zeros(len(data), dtype=bool) # Am I too correlated with a nearby known source with greater flux?
+    # for name in ['nks', 'nks2']:
+    #     smaller_flux = data['peak_flux'] < data[name+'_flux'] * flux_ratio * data['beam']
+    #     scintil_dist |= (data[name+'_sep_deg'] < min_rad_close) & smaller_flux
+    #     scintil_corr |= ((data[name+'_sep_deg'] < min_rad_far) & (np.abs(data[name+'_corr']) > 0.8)) & smaller_flux
+    # data['scintil_dist'] = scintil_dist
+    # data['scintil_corr'] = scintil_corr
+    # --------------------------------------------------------------------
     data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
     data['invalid_majmin'] &= data['area_pix'] > 3
     selection_classes = filter_bool_names + invalid_bool_names
@@ -145,7 +166,17 @@ if __name__=='__main__':
 
     # SELECTED ISLANDS
     # data, table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_'+prefix+'islands_selected'+suffix+'.fits')
+    data['valid_tcg'  ] &= (data['obs_cent_freq'] > 100e6) | (data['tcg_norm'  ] > 1.50*7/8)
+    data['valid_rms'  ] &= (data['obs_cent_freq'] > 100e6) | (data['rms_norm'  ] > 1.50*5/6)
+    # data['valid_spike'] &= (data['obs_cent_freq'] > 100e6) | (data['spike_norm'] > 1.50*8.5/8)
+    data['valid_tcg'  ] &= (data['obs_cent_freq'] > 150e6) | (data['tcg_norm'  ] > 1.25*7/8)
+    data['valid_rms'  ] &= (data['obs_cent_freq'] > 150e6) | (data['rms_norm'  ] > 1.25*5/6)
+    # data['valid_spike'] &= (data['obs_cent_freq'] > 150e6) | (data['spike_norm'] > 1.25*8.5/8)
+    data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
     data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+    obsids_unique, unique_counts = np.unique(data['obs_id'], return_counts=True)
+    obsids_invalid = obsids_unique[unique_counts > 15]
+    data = data[~np.array([row['obs_id'] in obsids_invalid for row in data], dtype=bool)]
     selection_classes = filter_bool_names
     fig = plt.figure(figsize=(7, 3.5))
     # Confusion
@@ -208,28 +239,43 @@ if __name__=='__main__':
         plt.bar(x[subset], counts[subset], label=f'{int(freq/1e6)} MHz', color=colors[bruh])
         plt.hlines(np.mean(counts[subset]), np.min(x[subset]), np.max(x[subset]), colors='k', linestyles='--')
         bruh += 1
-        # if freq < np.max(freq_unique):
-        #     plt.axvline(np.max(x[subset])+0.5, linestyle=':', color='k')
     plt.xticks(np.arange(len(counts)), obsids, rotation=90, fontsize='small')
     plt.xlabel('obsid')
     plt.xlim([-.75, x[-1]+.75])
-    plt.ylabel('Numbr of '+cand_name)
+    plt.ylabel('Number of '+cand_name)
     plt.legend()
     plt.tight_layout()
     plt.savefig('paper_plots/'+prefix+'sel_per_obs_bar.pdf')
 
-    if True: # For modelled data
+    plt.figure(figsize=(12, 4))
+    rms = obslist['rms'].values[freq_sort]
+    bruh = 0
+    for freq in freq_unique:
+        subset = freqs == freq
+        plt.bar(x[subset], rms[subset], label=f'{int(freq/1e6)} MHz', color=colors[bruh])
+        plt.hlines(np.mean(rms[subset]), np.min(x[subset]), np.max(x[subset]), colors='k', linestyles='--')
+        bruh += 1
+    plt.xticks(np.arange(len(counts)), obsids, rotation=90, fontsize='small')
+    plt.xlabel('obsid')
+    plt.xlim([-.75, x[-1]+.75])
+    plt.ylabel('Cube RMS (Jy)')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('paper_plots/cube_rms_bar.pdf')
+
+    if False: # For modelled data (non-scintillating)
         mod_data, mod_table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_modtab.fits')
         # Peak flux histogram
         plt.figure(figsize=(5.5, 3.5))
-        plt.subplot(1, 2, 1)
-        freq_list = np.unique(obslist['freq'])
+        ax = plt.subplot(1, 2, 1)
+        # freq_list = np.unique(obslist['freq'])
+        freq_list = np.unique(mod_data['obs_cent_freq'])
         bins = np.geomspace(0.2, 3, 11, True)
         hist, bins = np.histogram(data['mod_flux'], bins=bins)
         hist_all, _ = np.histogram(mod_data['flux'], bins=bins)
+        colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
         plt.stairs(hist/hist_all, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
         # Full data set
-        colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
         for i in range(len(freq_list)):
             hist, _ = np.histogram(data['mod_flux'][data['obs_cent_freq'] == freq_list[i]], bins=bins)
             hist_all, _ = np.histogram(mod_data['flux'][mod_data['obs_cent_freq'] == freq_list[i]], bins=bins)
@@ -239,11 +285,10 @@ if __name__=='__main__':
         plt.yscale('log')
         plt.xlabel('Peak flux (Jy)')
         plt.ylabel('Fraction of modelled transients recovered')
-        plt.yticks(ticks=[0.01, 0.1, 1], labels=['1%', '10%', '100%'])
+        plt.yticks(ticks=[0.05, 0.1, 1], labels=['5%', '10%', '100%'])
 
         # Peak flux histogram (split by filter)
         plt.subplot(1, 2, 2)
-        colors = ['blue', 'orange', 'green', 'red', 'purple']
         # data = data[data['mod_flux'] < 1]
         # mod_data = mod_data[mod_data['flux'] < 1]
         filters = np.array(['valid_tcg', 'valid_spike', 'valid_rms'])
@@ -251,6 +296,7 @@ if __name__=='__main__':
         hist, bins = np.histogram(data['mod_dur'], bins=bins)
         hist_all, _ = np.histogram(mod_data['dur'], bins=bins)
         plt.stairs(hist/hist_all, edges=bins*4, label=f'Overall', alpha=0.5, fill=True, lw=2)
+        colors = ['blue', 'orange', 'green', 'red', 'purple']
         # Full data set
         for i in range(len(filters)):
             hist, _ = np.histogram(data['mod_dur'][data[filters[i]]], bins=bins)
@@ -267,6 +313,72 @@ if __name__=='__main__':
         plt.xlabel('Pulse σ (s)')
         # plt.ylabel('Fraction of modelled transients recovered')
         plt.yticks([])
+        plt.ylim(ax.get_ylim())
+        plt.tight_layout()
+        plt.savefig('paper_plots/'+prefix+'sel_det_hist.pdf')
+
+    if False: # For modelled data (scintillating)
+        mod_data, mod_table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_modtab_scint.fits')
+        mod_data = mod_data[(mod_data['obs_cent_freq']/1e6).astype(np.int64) == 215]
+        data = data[(data['obs_cent_freq']/1e6).astype(np.int64) == 215]
+        _, bruh = np.unique(data['mod_idx'], return_index=True)
+        print(len(data))
+        data = data[bruh]
+        print(len(data))
+        # Peak flux histogram
+        plt.figure(figsize=(5.5, 3.5))
+        ax = plt.subplot(1, 2, 1)
+        # freq_list = np.unique(obslist['freq'])
+        freq_list = np.unique(mod_data['obs_cent_freq'])
+        bins = np.geomspace(0.2, 3, 11, True)
+        hist, bins = np.histogram(data['mod_flux'], bins=bins)
+        hist_all, _ = np.histogram(mod_data['flux'], bins=bins)
+        colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
+        plt.stairs(hist/hist_all, edges=bins, label=f'215 MHz', alpha=0.5, fill=True, lw=2)
+        filters = np.array(['valid_tcg', 'valid_spike', 'valid_rms'])
+        # Full data set
+        for i in range(len(filters)):
+            hist, _ = np.histogram(data['mod_flux'][data[filters[i]]], bins=bins)
+            plt.stairs(hist/hist_all, edges=bins, label=filters[i], lw=1, color=colors[i])
+        # Dim data set
+        hist_all, _ = np.histogram(mod_data['flux'][mod_data['dur'] > 1], bins=bins)
+        for i in range(len(filters)):
+            hist, _ = np.histogram(data['mod_flux'][data[filters[i]] & (data['mod_dur'] > 1)], bins=bins)
+            plt.stairs(hist/hist_all, edges=bins, lw=1, color=colors[i], ls='--')
+        plt.plot([0, 0], [0.01, 0.01], 'k--', label=f'σ>4s')
+        plt.legend(loc='lower right')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('Peak flux (Jy)')
+        plt.ylabel('Fraction of modelled transients recovered')
+        plt.yticks(ticks=[0.03, 0.1, 1], labels=['3%', '10%', '100%'])
+
+        # Peak flux histogram (split by filter)
+        plt.subplot(1, 2, 2)
+        # data = data[data['mod_flux'] < 1]
+        # mod_data = mod_data[mod_data['flux'] < 1]
+        bins = np.geomspace(0.1, 5, 11, True)
+        hist, bins = np.histogram(data['mod_dur'], bins=bins)
+        hist_all, _ = np.histogram(mod_data['dur'], bins=bins)
+        plt.stairs(hist/hist_all, edges=bins*4, label=f'215 MHz', alpha=0.5, fill=True, lw=2)
+        colors = ['blue', 'orange', 'green', 'red', 'purple']
+        # Full data set
+        for i in range(len(filters)):
+            hist, _ = np.histogram(data['mod_dur'][data[filters[i]]], bins=bins)
+            plt.stairs(hist/hist_all, edges=bins*4, label=filters[i], lw=1, color=colors[i])
+        # Dim data set
+        hist_all, _ = np.histogram(mod_data[mod_data['flux'] < .51]['dur'], bins=bins)
+        for i in range(len(filters)):
+            hist, _ = np.histogram(data[data[filters[i]] & (data['mod_flux'] < .5)]['mod_dur'], bins=bins)
+            plt.stairs(hist/hist_all, edges=bins*4, lw=1, color=colors[i], ls='--')
+        plt.plot([0, 0], [0.01, 0.01], 'k--', label=f'flux<0.5Jy')
+        plt.legend(loc='lower right')
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('Pulse σ (s)')
+        # plt.ylabel('Fraction of modelled transients recovered')
+        # plt.yticks([])
+        plt.ylim(ax.get_ylim())
         plt.tight_layout()
         plt.savefig('paper_plots/'+prefix+'sel_det_hist.pdf')
 

@@ -31,10 +31,11 @@ for fname in fname_list:
         data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
         data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
         table_list.append(data)
-    except FileNotFoundError:
+    except:
         print(f'{fname} not found')
 
 data = vstack(table_list)
+# data.write('combined.fits', format='fits')
 # data = data[data['obs_cent_freq'] > 100e6]
 # data = data[data['nks1_sep_deg'] > 0.1]
 # data = data[data['nks2_sep_deg'] > 0.1]

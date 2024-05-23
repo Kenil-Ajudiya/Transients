@@ -16,7 +16,9 @@ import os
 from glob import glob
 from astropy.wcs import WCS
 import os
-from astropy.wcs.utils import pixel_to_skycoord
+import warnings
+
+warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
 
 def ShowCutout(fig, axsize, cutout, wcs, isl_labels, candidate, pulsars, ftitle, ctitle, vmin=None, vmax=None, interval=97, xax=True, yax=True, highlight=False):
     image_cut = cutout.astype(np.float32)
@@ -77,7 +79,7 @@ def ShowHist(fig, axsize, obs_cutout, candidate):
     ax.axvline(candidate['peak_flux'], color='red', label='Candidate peak')
     ax.set_yscale('log')
     ax.set_xlabel('Flux (Jy)')
-    ax.set_ylabel('Number density')
+    ax.set_ylabel('Number density of pixels in cutout')
     ax.legend()
 
 def GetPulsars(skycoord, boxsize):
@@ -145,9 +147,9 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     ShowCutout(fig,     [0.300, 0.340, 0.200, 0.300], deep_data      , deep_wcs      , island, candidate, psrs, '',           'Deep (Jy)', interval=99, yax=False)
     ShowHist(  fig,     [0.530, 0.340, 0.155, 0.300], obs_cutout     , candidate)
     
-    ShowCutout(fig,     [0.700, 0.760, 0.150, 0.200], flr_cut[2]     , peak_frame.wcs, island, candidate, psrs, '',       filters[2].name, interval=99, highlight=candidate['valid_'+filters[2].name], xax=False)
-    ShowCutout(fig,     [0.700, 0.550, 0.150, 0.200], flr_cut[1]     , peak_frame.wcs, island, candidate, psrs, '',       filters[1].name, interval=99, highlight=candidate['valid_'+filters[1].name], xax=False)
-    ShowCutout(fig,     [0.700, 0.340, 0.150, 0.200], flr_cut[0]     , peak_frame.wcs, island, candidate, psrs, '',       filters[0].name, interval=99, highlight=candidate['valid_'+filters[0].name])
+    ShowCutout(fig,     [0.700, 0.760, 0.150, 0.200], flr_cut[2]     , peak_frame.wcs, island, candidate, psrs, '', f'{filters[2].name} = {candidate[filters[2].name]:.3} ({candidate[filters[2].name+"_norm"]:.3})', interval=99.9, highlight=candidate['valid_'+filters[2].name], xax=False)
+    ShowCutout(fig,     [0.700, 0.550, 0.150, 0.200], flr_cut[1]     , peak_frame.wcs, island, candidate, psrs, '', f'{filters[1].name} = {candidate[filters[1].name]:.3} ({candidate[filters[1].name+"_norm"]:.3})', interval=99.9, highlight=candidate['valid_'+filters[1].name], xax=False)
+    ShowCutout(fig,     [0.700, 0.340, 0.150, 0.200], flr_cut[0]     , peak_frame.wcs, island, candidate, psrs, '', f'{filters[0].name} = {candidate[filters[0].name]:.3} ({candidate[filters[0].name+"_norm"]:.3})', interval=99.9, highlight=candidate['valid_'+filters[0].name])
 
     fig.suptitle('obs_id: {0} cand_id: {1} cent_freq: {2} MHz coords: ({3}, {4}) ({5:.6}, {6:.6}) cube_rms: {7:.6} Jy num_cands / num_islands: {8}'.format(obs.obsid, candidate['cand_id'], int(obs.freq/1e6), skycoord.ra.to_string(u.hour), skycoord.dec.to_string(u.degree), skycoord.ra.deg, skycoord.dec.deg, obs.rms, obs.ncands), fontsize=12)
 

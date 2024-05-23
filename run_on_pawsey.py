@@ -5,6 +5,7 @@ import gc
 
 start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
+tempf = sys.argv[3]
 
 with open('obsids_shuf.txt', 'r') as file:
     lines = file.readlines()

@@ -19,6 +19,7 @@ def SelectSources(obs, table, labels, filters):
     min_flux_bright = 10*u.Jy   # Minmum flux to classify source as bright
     max_majmin = 2              # maximum allowed ratio between the major and minor radii
     flux_ratio = 1.5            # minimum ratio between candidate peak flux and nearest known source flux if within min_radius
+    max_count = 10              # Maximum number of candidates allowed
 
     cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 
@@ -75,13 +76,26 @@ def SelectSources(obs, table, labels, filters):
     # Determine whether the candidate's filter value is valid for each filter
     valid_any_filter = np.zeros(len(table), dtype=bool)
     for flr in filters:
-        valid_filter = table[flr.name] > flr.cut_high
+        cutoff = flr.cut_high
+        if obs.freq < 100e6 and flr.name != 'spike':
+            cutoff *= 1.5
+        valid_filter = table[flr.name] > cutoff
         valid_any_filter |= valid_filter
         table.add_column(Column(data=valid_filter, name='valid_'+flr.name))
+
+    table.add_column(Column(data=valid_any_filter, name='valid_any'))
 
     # Oring everything together
     # invalid = invalid_area | invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
     invalid = invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
+
+    too_many = np.zeros(len(table), dtype=bool)
+    if np.count_nonzero(~invalid) > max_count:
+        too_many[:] = True
+    table.add_column(Column(data=too_many, name='too_many'))
+
+    invalid |= too_many
+
     new_table = table[~invalid]
 
     # combined = np.zeros(len(new_table), dtype=bool)
