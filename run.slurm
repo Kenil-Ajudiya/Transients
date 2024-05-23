@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --account=pawsey0272
 #SBATCH --partition=work
-#SBATCH --array=0-5000:50
+#SBATCH --array=0-1000:50
 #SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --mem=32gb
