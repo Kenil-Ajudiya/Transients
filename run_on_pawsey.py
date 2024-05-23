@@ -15,9 +15,9 @@ workdir = os.path.expanduser('~/candidates/{0}')
 obs_idx = start_idx
 
 filters = [
-    Filter('tcg'  , 5.5, 8, True , fil.Correlator, (1,1,1), (25,1,1)),
-    Filter('spike', 5.5, 8, False, fil.Spike, 4),
-    Filter('rms'  , 2.0, 3, True , fil.RMS)]
+    Filter('tcg'  , 5.5, 8.5, True , fil.Correlator, (1,1,1), (25,1,1)),
+    Filter('spike', 5.5, 7, False, fil.Spike, 4),
+    Filter('rms'  , 2.0, 2.5, True , fil.RMS)]
 
 for obsid in obsids[start_idx:end_idx]:
     print('--------------', obsid, '------', obs_idx, flush=True)
