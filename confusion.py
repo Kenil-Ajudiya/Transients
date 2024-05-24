@@ -117,7 +117,7 @@ if __name__=='__main__':
     data['valid_rms'] = data['rms_norm'] > 5/6
     # Brooooooo ----------------------------------------------------------
     # min_radius = 0.066666666
-    # flux_ratio = np.ones(len(data)) * 1
+    # flux_ratio = np.ones(len(data)) * 1.1
     # flux_ratio[data['obs_cent_freq'] < 150e6] = 1.5
     # flux_ratio[data['obs_cent_freq'] < 100e6] = 2.0
     # min_rad_close = np.where(data['maj_rad_deg'] < min_radius, min_radius, data['maj_rad_deg'])

@@ -18,7 +18,13 @@ def SelectSources(obs, table, labels, filters):
     min_rad_bright = 1.0*u.deg  # Radius around bright (flux > min_flux_bright) sources to exclude candidates
     min_flux_bright = 10*u.Jy   # Minmum flux to classify source as bright
     max_majmin = 2              # maximum allowed ratio between the major and minor radii
-    flux_ratio = 1.5            # minimum ratio between candidate peak flux and nearest known source flux if within min_radius
+    flux_ratio = 1.1            # minimum ratio between candidate peak flux and nearest known source flux if within min_radius
+    if obs.freq < 175e6:
+        flux_ratio = 1.25
+    if obs.freq < 150e6:
+        flux_ratio = 1.5
+    if obs.freq < 100e6:
+        flux_ratio = 2.0
     max_count = 10              # Maximum number of candidates allowed
 
     cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
