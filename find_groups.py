@@ -61,15 +61,25 @@ match_sep = 4*u.arcmin
 
 # Finding groups of candidates
 
-for i in range(len(data)):
-    if not marked[i]:
-        marked[i] = True
-        group = []
-        idx, _, sep, _ = cat[i].search_around_sky(cat, match_sep)
-        for j in range(len(idx)):
-            marked[idx[j]] = True
-            group.append({'cand':data[idx[j]], 'sep':sep[idx[j]].arcmin})
+idx1, idx2, sep, _ = search_around_sky(cat, cat, match_sep)
+sort_idx = np.argsort(idx1)
+idx1 = idx1[sort_idx]
+idx2 = idx2[sort_idx]
+sep = sep[sort_idx]
+cur_idx = -1
+group = []
+
+for i in range(len(idx1)):
+    if cur_idx != idx1[i]:
         groups.append(group)
+        if marked[idx1[i]]:
+            continue
+        group = []
+        cur_idx = idx1[i]
+    if not marked[idx2[i]]:
+        marked[idx2[i]] = True
+        group.append({'cand':data[idx2[i]], 'sep':sep[idx2[i]].arcmin})
+        
 
 
 
