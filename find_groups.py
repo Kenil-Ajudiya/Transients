@@ -74,7 +74,8 @@ for i in range(len(idx1)):
         groups.append(group)
         if marked[idx1[i]]:
             continue
-        group = []
+        group = [{'cand':data[idx1[i]], 'sep':0}]
+        marked[idx1[i]] = True
         cur_idx = idx1[i]
     if not marked[idx2[i]]:
         marked[idx2[i]] = True
