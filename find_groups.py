@@ -1,7 +1,7 @@
 import numpy as np
 import FileIO as io
 import pandas as pd
-from astropy.coordinates import match_coordinates_sky
+from astropy.coordinates import match_coordinates_sky, search_around_sky
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import os
 import sys
+
+# from sklearn.cluster import DBSCAN
+
 
 # obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
@@ -40,27 +43,48 @@ data = vstack(table_list)
 # data = data[data['nks1_sep_deg'] > 0.1]
 # data = data[data['nks2_sep_deg'] > 0.1]
 cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
-idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
+# idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
 marked = np.zeros(len(data), dtype=bool)
 groups = []
 match_sep = 4*u.arcmin
 
+# def cluster(data, epsilon,N): #DBSCAN, euclidean distance
+#     db     = DBSCAN(eps=epsilon, min_samples=N).fit(data)
+#     labels = db.labels_ #labels of the found clusters
+#     n_clusters = len(set(labels)) - (1 if -1 in labels else 0) #number of clusters
+#     clusters   = [data[labels == i] for i in range(n_clusters)] #list of clusters
+#     return clusters, n_clusters
+
+# centers = [[1, 1,1], [-1, -1,1], [1, -1,1]]
+# cluster(X,epsilon,N)
+    
+
 # Finding groups of candidates
+
 for i in range(len(data)):
     if not marked[i]:
         marked[i] = True
-        group = [{'cand':data[i], 'sep':0}]
-        j = i
-        # While I have not visited you before, and you are close, add to group
-        while (not marked[idx[j]]) and (sep[j] < match_sep):
-            j = idx[j]
-            group.append({'cand':data[j], 'sep':sep[j].arcmin})
-            marked[j] = True
-        # Add group to list of groups if they originate from at least 2 obsids
-        # group_obsids = [x['obs_id'] for x in group]
-        # if len(np.unique(group_obsids)) == len(group):
-        #     groups.append(group)
+        group = []
+        idx, _, sep, _ = cat[i].search_around_sky(cat, match_sep)
+        for j in range(len(idx)):
+            marked[idx[j]] = True
+            group.append({'cand':data[idx[j]], 'sep':sep[idx[j]].arcmin})
         groups.append(group)
+
+
+
+# for i in range(len(data)):
+#     if not marked[i]:
+#         marked[i] = True
+#         group = [{'cand':data[i], 'sep':0}]
+#         j = i
+#         # While I have not visited you before, and you are close, add to group
+#         while (not marked[idx[j]]) and (sep[j] < match_sep):
+#             j = idx[j]
+#             group.append({'cand':data[j], 'sep':sep[j].arcmin})
+#             marked[j] = True
+#         groups.append(group)
+
 
 group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for group in groups]
 sort_idx = np.argsort(group_lengths)
