@@ -111,6 +111,7 @@ group_lengths = group_lengths_2
 groups = [groups[i] for i in sort_idx]
 i = 0
 obsids = []
+cands = []
 for group in groups:
     if len(group) > 3 and len(group) == group_lengths[i]:
         for row in group:
@@ -119,10 +120,14 @@ for group in groups:
             print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
             print('%10s %5d %4d MHz %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
             obsids.append(cand['obs_id'])
+            cands.append(cand)
         print('--------------------------')
     i += 1
 
 print('\n'.join(np.unique(obsids)))
+
+bruh = vstack(cands)
+bruh.write('group_islands.fits', format='fits')
 
 # valid = data['obs_cent_freq'] > 120e6
 # valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
