@@ -27,12 +27,17 @@ else:
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]
 
 invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
-filter_bool_names = ['valid_spike']
+filter_bool_names = ['valid_spike', 'valid_tcg', 'valid_rms']
 
 table_list = []
 for fname in fname_list:
     try:
         data = Table.read(fname, format='fits')
+        # data['valid_tcg'] = data['tcg_norm'] > 0.8
+        # data['valid_rms'] = data['rms_norm'] > 0.8
+        # data['invalid_beam'] = data['beam_norm'] < 0.25
+        # data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+        # data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
         print(f'{fname} read')
         table_list.append(data)
     except:
@@ -47,7 +52,7 @@ cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5"
 # idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
 marked = np.zeros(len(data), dtype=bool)
 groups = []
-match_sep = 4*u.arcmin
+match_sep = 1*u.arcmin
 
 # def cluster(data, epsilon,N): #DBSCAN, euclidean distance
 #     db     = DBSCAN(eps=epsilon, min_samples=N).fit(data)
