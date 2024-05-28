@@ -31,8 +31,6 @@ for fname in fname_list:
     try:
         data = Table.read(fname, format='fits')
         print(f'{fname} read')
-        # data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
-        # data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
         table_list.append(data)
     except:
         print(f'{fname} not found')
