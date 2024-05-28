@@ -70,16 +70,17 @@ cur_idx = -1
 group = []
 
 for i in range(len(idx1)):
-    if marked[idx1[i]]:
-        continue
     if cur_idx != idx1[i]:
         groups.append(group)
+        group = []
+        if marked[idx1[i]]:
+            continue
         group = [{'cand':data[idx1[i]], 'sep':0}]
         marked[idx1[i]] = True
         cur_idx = idx1[i]
     if not marked[idx2[i]]:
         marked[idx2[i]] = True
-        group.append({'cand':data[idx2[i]], 'sep':sep[idx2[i]].arcmin})
+        group.append({'cand':data[idx2[i]], 'sep':sep[i].arcmin})
         
 
 
@@ -101,12 +102,12 @@ group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for 
 sort_idx = np.argsort(group_lengths)
 groups = [groups[i] for i in sort_idx]
 for group in groups:
-    if len(group) > 1:
+    if True: #len(group) > 1:
         for row in group:
             cand = row['cand']
             coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
             print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree)]
-            print(' '.join([f'{str(x):20.20}' for x in print_vals]))
+            print('%10s %5d %4d MHz %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s' % tuple(print_vals))
         print('--------------------------')
 
 # valid = data['obs_cent_freq'] > 120e6
