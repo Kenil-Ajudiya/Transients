@@ -10,5 +10,5 @@
 
 module load singularity/3.11.4-slurm
 export export SINGULARITY_BINDPATH=`pwd`:$HOME,/tmp
-singularity exec container.sif python3 run_on_pawsey.py $((100 * SLURM_ARRAY_TASK_ID + 75)) $((100 * SLURM_ARRAY_TASK_ID + 100))
+singularity exec container.sif python3 run_on_pawsey.py $((20 * SLURM_ARRAY_TASK_ID)) $((20 * SLURM_ARRAY_TASK_ID + 20))
 echo "Job took ${SECONDS} seconds"

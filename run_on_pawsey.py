@@ -6,12 +6,21 @@ import gc
 start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
 
-with open('obsids_shuf.txt', 'r') as file:
+# obsids_fname = 'obsids_shif.txt'
+obsids_fname = 'obsids_groups.txt'
+
+with open(obsids_fname, 'r') as file:
     lines = file.readlines()
     obsids = [line.strip() for line in lines]
 
-path = os.path.expanduser('~/candidates/{0}/{0}_{1}')
-workdir = os.path.expanduser('~/candidates/{0}')
+# main_dir = 'candidates'
+main_dir = 'groups'
+
+true_mask_table = fits.open('~/try_1_islands.fits')[1].data
+true_mask = SkyCoord(true_mask_table['ra_deg'], true_mask_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
+
+path = os.path.expanduser('~/'+main_dir+'/{0}/{0}_{1}')
+workdir = os.path.expanduser('~/'+main_dir+'/{0}')
 obs_idx = start_idx
 
 filters = [
@@ -25,17 +34,17 @@ for obsid in obsids[start_idx:end_idx]:
     try:
         cube_fname = path.format(obsid, 'transient.hdf5')
         if not os.path.exists(workdir.format(obsid)):
-            os.system('mkdir ~/candidates/{0}'.format(obsid))
+            os.system('mkdir ~/{0}/{1}'.format(main_dir, obsid))
             os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_transient.hdf5 {1}'.format(obsid, cube_fname))
             if os.path.isfile(cube_fname):
-                cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=15)
+                cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=150, true_mask=true_mask)
                 if len(cands) > 10:
                     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
                 os.system(f'rm {cube_fname}')
                 if os.path.isfile(path.format(obsid, "deep-MFS-image-pb.fits")):
                     os.system(f'rm {path.format(obsid, "deep-MFS-image-pb.fits")}')
             else:
-                os.system(f'rm -r ~/candidates/{obsid}')
+                os.system(f'rm -r ~/{main_dir}/{obsid}')
     except Exception as e:
         print(e)
     gc.collect()

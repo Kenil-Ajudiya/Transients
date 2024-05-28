@@ -9,6 +9,8 @@ from astropy.time import Time
 from astropy.coordinates import get_body, EarthLocation
 
 def SelectSources(obs, table, labels, filters):
+    loose = True
+
     min_beam = 0.5              # Minimum beam value normalised by the central beam values
     min_radius = 4*u.arcmin     # Minimum radius to classify as scintillation
     radius_coef = 2             # max(table['maj_rad_deg'] * radius_coef, min_radius) is used to classify scintillation
@@ -26,6 +28,12 @@ def SelectSources(obs, table, labels, filters):
     if obs.freq < 100e6:
         flux_ratio = 2.0
     max_count = 10              # Maximum number of candidates allowed
+    cut_scales = [1.0, 1.25, 1.5]
+
+    if loose:
+        min_beam = 0.25
+        max_count = 100
+        cut_scales = [0.8, 0.8, 0.8]
 
     cat_cands = SkyCoord(table['ra_deg'], table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 
@@ -83,11 +91,14 @@ def SelectSources(obs, table, labels, filters):
     valid_any_filter = np.zeros(len(table), dtype=bool)
     for flr in filters:
         cutoff = flr.cut_high
-        if obs.freq < 150e6 and flr.name != 'spike':
-            if obs.freq < 100e6:
-                cutoff *= 1.5
+        if flr.name != 'spike':
+            if obs.freq < 150e6:
+                if obs.freq < 100e6:
+                    cutoff *= cut_scales[2]
+                else:
+                    cutoff *= cut_scales[1]
             else:
-                cutoff *= 1.25
+                cutoff *= cut_scales[0]
         valid_filter = table[flr.name] > cutoff
         valid_any_filter |= valid_filter
         table.add_column(Column(data=valid_filter, name='valid_'+flr.name))

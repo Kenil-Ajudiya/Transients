@@ -18,7 +18,7 @@ import sys
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
 
 # fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
-if len(sys.argv == 3):
+if len(sys.argv) == 3:
     fname_list = [f'{sys.argv[1]}/{fname}/{fname}_{sys.argv[2]}' for fname in os.listdir(sys.argv[1])]
 else:
     fname_list = [sys.argv[1]]
@@ -106,15 +106,23 @@ for i in range(len(idx1)):
 
 group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for group in groups]
 sort_idx = np.argsort(group_lengths)
+group_lengths_2 = [group_lengths[i] for i in sort_idx]
+group_lengths = group_lengths_2
 groups = [groups[i] for i in sort_idx]
+i = 0
+obsids = []
 for group in groups:
-    if len(group) > 0:
+    if len(group) > 3 and len(group) == group_lengths[i]:
         for row in group:
             cand = row['cand']
             coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
-            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree)]
-            print('%10s %5d %4d MHz %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s' % tuple(print_vals))
+            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
+            print('%10s %5d %4d MHz %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
+            obsids.append(cand['obs_id'])
         print('--------------------------')
+    i += 1
+
+print('\n'.join(np.unique(obsids)))
 
 # valid = data['obs_cent_freq'] > 120e6
 # valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)

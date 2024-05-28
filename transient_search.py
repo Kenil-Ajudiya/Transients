@@ -55,7 +55,7 @@ class Filter:
         self.data = self.func(cube, *self.args)
 
 
-def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, obs_name='transient.hdf5', max_plots=10):
+def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, obs_name='transient.hdf5', max_plots=10, true_mask=None):
     obs = Observation(path, obsid, obs_name)
 
     # Ignoring high RMS frames
@@ -76,7 +76,12 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
             io.WriteImage(path.format(obs.obsid, run_name+'_'+flr.name), flr.data, obs.header, flr.name)
 
     # Detect islands
-    isl_table, isl_labels, isl_slices = isl.FindIslands(obs, filters, True)
+    isl_table, isl_labels, _ = isl.FindIslands(obs, filters, True)
+
+    if true_mask is not None:
+        cands_coord = SkyCoord(isl_table['ra_deg'], isl_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
+        _, d2d, _ = cands_coord.match_to_catalog_sky(true_mask)
+        isl_table = isl_table[d2d < 1*u.arcmin]
 
     # Cross-match with catalogue of known sources in observation
     knw_table = knw.FindKnownSources(obs, os.getenv('GGSM', '~/GLEAM-X-pipeline/models/GGSM.fits'), filters)
@@ -106,64 +111,3 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
 
     return isl_table_selected
 
-'''
-
-plt.imshow(np.log(np.max(data, axis=0)), cmap='gray')
-plt.scatter(isl_table['x_pix'], isl_table['y_pix'])
-plt.contour(isl_labels > 0)
-# plt.show()
-
-# exit()
-
-
-curves = isl_table['curve'].data / np.max(isl_table['curve'].data, axis=1, keepdims=True)
-group = np.zeros(curves.shape[0], dtype=np.int64)
-
-curves -= np.mean(curves, axis=1, keepdims=True)
-
-# curves = np.random.normal(0, 1, curves.shape)
-
-print(curves.shape)
-maxind = np.argmax(isl_table['area_pix'])
-
-def Pearson(a, b):
-    return np.sum(a[np.newaxis, :] * b, axis=1) / np.sqrt(np.sum(a[np.newaxis, :]**2, axis=1) * np.sum(b**2, axis=1))
-
-inds = np.arange(curves.shape[0])
-fluxsort = np.flip(np.argsort(isl_table['peak_flux']))
-inds = inds[fluxsort]
-curves = curves[fluxsort]
-# corr = np.zeros(curves.shape[0])
-corr = np.abs(Pearson(curves[0], curves))
-for i in range(1, curves.shape[0]):
-    k = 0.75
-    pearson = Pearson(curves[i-1], curves[i:])
-    corr[i:] = k*corr[i:] + (1-k)*np.abs(pearson)
-    r = 1
-    # a = (1/r * np.sqrt((isl_table['x_pix'][i:]-isl_table['x_pix'][i-1])**2 + (isl_table['y_pix'][i:]-isl_table['y_pix'][i-1])**2))
-    # corr[i:] = corr[i:] ** a
-    curves[i:][pearson < 0] *= -1
-    corrsort = np.flip(np.argsort(corr[i:]))
-    curves[i:] = curves[corrsort+i]
-    inds[i:] = inds[corrsort+i]
-
-plt.figure()
-plt.imshow(curves, aspect='auto', cmap='jet')
-plt.gca().invert_yaxis()
-
-plt.figure()
-plt.plot(corr)
-
-# plt.figure()
-# for i in range(575, 600):
-#     plt.plot(isl_table['curve'][inds[i]])
-#     # plt.scatter(isl_table['x_pix'][inds[i]], isl_table['y_pix'][inds[i]])
-
-for i in range(len(isl_table_selected)):
-    plt.figure()
-    plt.imshow(np.log(np.max(data, axis=0)), cmap='gray')
-    plt.scatter(isl_table_selected['x_pix'][i], isl_table_selected['y_pix'][i])
-    plt.contour(isl_labels == isl_table_selected['can_idx'][i])
-
-plt.show()
-'''
