@@ -23,11 +23,11 @@ for fname in fname_list:
     try:
         data = Table.read(fname, format='fits')
         data = Table.read(fname, format='fits')
-        data['valid_tcg'] = data['tcg_norm'] > 0.8
-        data['valid_rms'] = data['rms_norm'] > 0.8
-        data['invalid_beam'] = data['beam_norm'] < 0.25
-        data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
-        data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+        # data['valid_tcg'] = data['tcg_norm'] > 0.8
+        # data['valid_rms'] = data['rms_norm'] > 0.8
+        # data['invalid_beam'] = data['beam_norm'] < 0.25
+        # data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+        # data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
         print(f'{fname} read', count, '/', len(fname_list))
         table_list.append(data)
     except:

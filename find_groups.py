@@ -113,7 +113,7 @@ i = 0
 obsids = []
 cands = []
 for group in groups:
-    if len(group) > 3 and len(group) == group_lengths[i]:
+    if len(group) > 2 and len(group) == group_lengths[i]:
         for row in group:
             cand = row['cand']
             coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
@@ -126,8 +126,8 @@ for group in groups:
 
 print('\n'.join(np.unique(obsids)))
 
-bruh = vstack(cands)
-bruh.write('group_islands.fits', format='fits')
+# bruh = vstack(cands)
+# bruh.write('group_islands.fits', format='fits')
 
 # valid = data['obs_cent_freq'] > 120e6
 # valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
