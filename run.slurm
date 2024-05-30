@@ -2,7 +2,7 @@
 #SBATCH --account=pawsey0272
 #SBATCH --partition=work
 #SBATCH --array=0-53
-#SBATCH --time=12:00:00
+#SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --mem=32gb
 #SBATCH --ntasks-per-node=1
