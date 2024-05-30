@@ -1,4 +1,6 @@
 from transient_search import *
+import filters as fil
+from astropy.io import fits
 import os
 import sys
 import gc

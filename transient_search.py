@@ -1,19 +1,13 @@
 import FileIO as io
-import filters as fil
 import island as isl
 import known as knw
 import crossmatch as cm
 import selection as sel
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.time import Time
 import diagnostic
-from astropy.io import fits
-import os
-from glob import glob
-import matplotlib.pyplot as plt
 
 class Observation:
     def __init__(self, path, obsid, obs_name):
@@ -100,14 +94,29 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     obs.ncands = f'{len(isl_table_selected)} / {len(isl_table)}'
     
     if make_plots:
-        # Removing old images
-        oldfiles = glob(path.format(obs.obsid, 'candidate_*'))
-        for f in oldfiles:
-            os.remove(f)
-
         if len(isl_table_selected) <= max_plots:
             for candidate in isl_table_selected:
                 diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels)
+
+    # Prepare for upload
+    isl_table_selected.add_column(isl_table_selected['maj_rad_pix'], name='rad_pix')
+    isl_table_selected.add_column(isl_table_selected['maj_rad_deg'], name='rad_deg')
+
+    fits_fields = ['obs_id', 'filter_id', 'cand_id', 'x_pix', 'y_pix', 'ra_deg', 'dec_deg', 'area_pix', 'rad_pix', 'rad_deg', 'cent_sep_deg', 'peak_flux', 'beam', 'obs_cent_freq', 'det_stat', 'nks_sep_deg', 'nks_x_pix', 'nks_y_pix', 'nks_ra_deg', 'nks_dec_deg', 'nks_flux', 'nks_name', 'nks_flux_rat']
+    meta_fields_int = ['min_rad_pix', 'maj_rad_pix', 'peak_frame']
+    meta_fields_float = ['rot_deg', 'beam_norm', 'tcg', 'spike', 'rms', 'tcg_norm', 'spike_norm', 'rms_norm', 'nks_corr', 'nks2_sep_deg', 'nks2_flux', 'nks2_corr', 'nks2_flux_rat']
+    meta_fields_str = ['nks2_name']
+
+    new_table = isl_table_selected[fits_fields]
+    new_table.add_column(np.zeros(len(new_table), dtype=np.dtype('<S500')), name='meta')
+
+    for i in range(len(new_table)):
+        new_table['meta'][i] = '{' + ','.join(
+            ['"%s":%d'   % (field, isl_table_selected[field][i]) for field in meta_fields_int] +
+            ['"%s":%.4f' % (field, isl_table_selected[field][i]) for field in meta_fields_float] +
+            ['"%s":"%s"' % (field, isl_table_selected[field][i]) for field in meta_fields_str]) + '}'
+
+    new_table.write(path.format(obsid, run_name+'_islands_selected_meta.fits'), format='fits', overwrite=True)
 
     return isl_table_selected
 
