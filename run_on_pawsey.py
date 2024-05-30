@@ -31,9 +31,14 @@ path = os.path.expanduser('~/'+main_dir+'/{0}/{0}_{1}')
 workdir = os.path.expanduser('~/'+main_dir+'/{0}')
 obs_idx = start_idx
 
+# filters = [
+#     Filter('tcg'  , 5.5, 7, True , fil.Correlator, (1,1,1), (25,1,1)),
+#     Filter('spike', 5.5, 8.5, False, fil.Spike, 4),
+#     Filter('rms'  , 2.0, 2.5, True , fil.RMS)]
+
 filters = [
-    Filter('tcg'  , 5.5, 7, True , fil.Correlator, (1,1,1), (25,1,1)),
-    Filter('spike', 5.5, 8.5, False, fil.Spike, 4),
+    Filter('tcg'  , 5.5, 7, True , fil.Correlator, (1,1,1), (35,1,1)),
+    Filter('spike', 5.5, 8.0, False, fil.Spike, 4),
     Filter('rms'  , 2.0, 2.5, True , fil.RMS)]
 
 for obsid in obsids[start_idx:end_idx]:
