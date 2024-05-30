@@ -8,6 +8,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.time import Time
 import diagnostic
+import os
 
 class Observation:
     def __init__(self, path, obsid, obs_name):
