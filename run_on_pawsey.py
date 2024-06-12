@@ -60,7 +60,7 @@ for obsid in obsids[start_idx:end_idx]:
                     os.system(f'rm {cube_fname}')
                     if os.path.isfile(path.format(obsid, "deep-MFS-image-pb.fits")):
                         os.system(f'rm {path.format(obsid, "deep-MFS-image-pb.fits")}')
-            else:
+            elif clean_up:
                 os.system(f'rm -r ~/{main_dir}/{obsid}')
     except Exception as e:
         print(e)
