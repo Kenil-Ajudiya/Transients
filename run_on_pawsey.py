@@ -22,7 +22,8 @@ with open(obsids_fname, 'r') as file:
 
 # main_dir = 'candidates'
 # main_dir = 'groups'
-main_dir = 'Epoch0084_candidates'
+# main_dir = 'Epoch0084_candidates'
+main_dir  = 'Epoch0763_candidates'
 
 # true_mask_table = fits.open(os.path.expanduser('~/group_islands.fits'))[1].data
 # true_mask = SkyCoord(true_mask_table['ra_deg'], true_mask_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
