@@ -9,9 +9,8 @@ start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
 
 clean_up = False
-do_scp = True
-# scp_source = 'ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids'
-scp_source = '/scratch/pawsey0272/smcsweeney/Epoch0763'
+do_scp = False
+scp_source = 'ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids'
 
 # obsids_fname = 'obsids_shif.txt'
 # obsids_fname = 'obsids_groups.txt'
