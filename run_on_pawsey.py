@@ -13,7 +13,8 @@ do_scp = False
 
 # obsids_fname = 'obsids_shif.txt'
 # obsids_fname = 'obsids_groups.txt'
-obsids_fname = 'Epoch0084_obsids.txt'
+# obsids_fname = 'Epoch0084_obsids.txt'
+obsids_fname = 'test_obsids.txt'
 
 with open(obsids_fname, 'r') as file:
     lines = file.readlines()

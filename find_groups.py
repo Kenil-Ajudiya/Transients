@@ -113,7 +113,25 @@ i = 0
 obsids = []
 cands = []
 for group in groups:
-    if len(group) > 2 and len(group) == group_lengths[i]:
+    if len(group) > 3 and len(group) == group_lengths[i]:
+
+        times = np.array([int(row['cand']['obs_id']) + row['cand']['peak_frame']*4 for row in group])
+        times = np.sort(times)
+        test_period = times[-1] - times[0]
+        period = 0
+        residual = 100000
+        while test_period > 120:
+            test_residual = np.mean((times[1:-1] - times[0]) % test_period)
+            if test_residual < residual:
+                residual = test_residual
+                period = test_period
+            test_period /= 2
+
+        if residual > 16:
+            continue
+        else:
+            print('period:', period, '    residual:', residual)
+
         for row in group:
             cand = row['cand']
             coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
