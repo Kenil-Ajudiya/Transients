@@ -9,6 +9,7 @@ from astropy import units as u
 from astropy.time import Time
 import diagnostic
 import os
+from filters import RemoveLines
 
 class Observation:
     def __init__(self, path, obsid, obs_name):
@@ -60,6 +61,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     cube_purged = obs.data[~ignore_frames, :, :]
     if np.count_nonzero(ignore_frames) > 0:
         print('skipped frames:', np.nonzero(ignore_frames)[0], flush=True)
+    cube_purged = RemoveLines(cube_purged)
 
     # Applying filters
 

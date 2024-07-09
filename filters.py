@@ -21,6 +21,45 @@ def Correlator(cube, std, shape):
 def RMS(cube):
     return np.std(cube, axis=0)
 
+def SquareWindow(width, r1, r2):
+    x = np.arange(width)
+    w2 = int(width/2)
+    xx, yy = np.meshgrid(x, x)
+    rx = np.abs(xx-w2)
+    ry = np.abs(yy-w2)
+    win1 = (np.cos(np.pi*(rx-r1)/(r2-r1)) + 1) / 2.0
+    win1[rx < r1] = 1
+    win1[rx > r2] = 0
+    win2 = (np.cos(np.pi*(ry-r1)/(r2-r1)) + 1) / 2.0
+    win2[ry < r1] = 1
+    win2[ry > r2] = 0
+    win = win1 * win2
+    win.shape = (1, width, width)
+    return win
+
+def RemoveLines(cube):
+    w = 100
+    step = int(w/2)
+    g = SquareWindow(w, 0, w/2)
+    output = np.zeros_like(cube)
+    scale = np.zeros_like(cube)
+
+    xx, yy = np.meshgrid(np.arange(w), np.arange(w))
+    xx.shape = (1, w, w)
+    yy.shape = (1, w, w)
+
+    for i in range(0, cube.shape[1]-w+1, step):
+        for j in range(0, cube.shape[2]-w+1, step):
+            y = cube[:, i:i+w, j:j+w]
+            YG = np.fft.rfft2(y * g, axes=(1,2))
+            YGabs = np.abs(YG)
+            YG[YGabs > 7*np.std(YGabs)] = 0
+            output[:, i:i+w, j:j+w] += np.fft.irfft2(YG)
+            scale[:, i:i+w, j:j+w] += g
+    
+    np.divide(output, scale, out=output, where=scale!=0)
+    return output
+
 def MultiScaleCorrFilter(cube, r=None):
     flr_data = np.zeros(cube.shape)
     
