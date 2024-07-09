@@ -38,7 +38,7 @@ def SquareWindow(width, r1, r2):
     return win
 
 def RemoveLines(cube):
-    w = 100
+    w = 300
     step = int(w/2)
     g = SquareWindow(w, 0, w/2)
     output = np.zeros_like(cube)
@@ -54,8 +54,8 @@ def RemoveLines(cube):
             YG = np.fft.rfft2(y, axes=(1,2))
             YGabs = np.abs(YG)
             YG[YGabs > 7*np.std(YGabs)] = 0
-            output[:, i:i+w, j:j+w] += np.fft.irfft2(YG)
-            scale[:, i:i+w, j:j+w] += 1
+            output[:, i:i+w, j:j+w] += np.fft.irfft2(YG) * g
+            scale[:, i:i+w, j:j+w] += g
     
     np.divide(output, scale, out=output, where=scale!=0)
     output[:,:10,:] = 0
