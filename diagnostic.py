@@ -133,6 +133,8 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
         gleam_wcs = peak_frame.wcs
         print(e, flush=True)
 
+    WCS()
+
     # Getting pulsar catalogue
     psrs = GetPulsars(skycoord, boxsize)
 

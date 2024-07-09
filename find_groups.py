@@ -18,15 +18,18 @@ import sys
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
 
 # fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
-if len(sys.argv) == 3:
-    fname_list = [f'{sys.argv[1]}/{fname}/{fname}_{sys.argv[2]}' for fname in os.listdir(sys.argv[1])]
-else:
-    fname_list = [sys.argv[1]]
+# if len(sys.argv) == 3:
+#     fname_list = [f'{sys.argv[1]}/{fname}/{fname}_{sys.argv[2]}' for fname in os.listdir(sys.argv[1])]
+# else:
+#     fname_list = [sys.argv[1]]
+
+fname_list = sys.argv[1:]
 
 # obslist = pd.read_csv('100_obs.csv')
 # fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]
 
-invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
+# invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
+invalid_bool_names = ['invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
 filter_bool_names = ['valid_spike', 'valid_tcg', 'valid_rms']
 
 table_list = []
@@ -35,10 +38,11 @@ for fname in fname_list:
         data = Table.read(fname, format='fits')
         # data['valid_tcg'] = data['tcg_norm'] > 0.8
         # data['valid_rms'] = data['rms_norm'] > 0.8
-        # data['invalid_beam'] = data['beam_norm'] < 0.25
-        # data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
-        # data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+        data['invalid_beam'] = data['beam_norm'] < 0.25
+        data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+        data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
         print(f'{fname} read')
+        data.add_column(Table.Column(name='fname', data=[fname for _ in range(len(data))]))
         table_list.append(data)
     except:
         print(f'{fname} not found')
@@ -113,7 +117,7 @@ i = 0
 obsids = []
 cands = []
 for group in groups:
-    if len(group) > 3 and len(group) == group_lengths[i]:
+    if len(group) > 1 and len(group) == group_lengths[i]:
 
         times = np.array([int(row['cand']['obs_id']) + row['cand']['peak_frame']*4 for row in group])
         times = np.sort(times)
@@ -127,18 +131,22 @@ for group in groups:
                 period = test_period
             test_period /= 2
 
-        if residual > 16:
+        if False: #residual > 16:
             continue
         else:
             print('period:', period, '    residual:', residual)
 
+        image_link = 'feh '
+
         for row in group:
             cand = row['cand']
             coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
-            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
-            print('%10s %5d %4d MHz %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
+            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['fname'], cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
+            print('%10s %5d %4d MHz %9.9s %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
+            image_link += '%9.9s_candidates/%s_candidate_%d.png ' % (cand['fname'], cand['obs_id'], cand['cand_id'])
             obsids.append(cand['obs_id'])
             cands.append(cand)
+        print(image_link)
         print('--------------------------')
     i += 1
 

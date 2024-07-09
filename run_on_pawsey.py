@@ -41,7 +41,7 @@ obs_idx = start_idx
 
 filters = [
     Filter('tcg'  , 5.5, 7.0, True , fil.Correlator, (1,1,1), (125,1,1)),
-    Filter('spike', 5.5, 6.0, False, fil.Spike, 4),
+    Filter('spike', 5.5, 8.5, False, fil.Spike, 4),
     Filter('rms'  , 2.0, 2.25, True , fil.RMS)]
 
 for obsid in obsids[start_idx:end_idx]:
