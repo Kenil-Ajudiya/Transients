@@ -27,7 +27,7 @@ def SelectSources(obs, table, labels, filters):
         flux_ratio = 1.5
     if obs.freq < 100e6:
         flux_ratio = 2.0
-    max_count = 20              # Maximum number of candidates allowed
+    max_count = 100              # Maximum number of candidates allowed
     cut_scales = [1.0, 1.25, 1.5]
 
     if loose:
