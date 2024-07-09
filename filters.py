@@ -58,6 +58,10 @@ def RemoveLines(cube):
             scale[:, i:i+w, j:j+w] += g
     
     np.divide(output, scale, out=output, where=scale!=0)
+    output[:,:10,:] = 0
+    output[:,:,:10] = 0
+    output[:,-10:,:] = 0
+    output[:,:,-10:] = 0
     return output
 
 def MultiScaleCorrFilter(cube, r=None):
