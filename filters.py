@@ -51,11 +51,11 @@ def RemoveLines(cube):
     for i in range(0, cube.shape[1]-w+1, step):
         for j in range(0, cube.shape[2]-w+1, step):
             y = cube[:, i:i+w, j:j+w]
-            YG = np.fft.rfft2(y * g, axes=(1,2))
+            YG = np.fft.rfft2(y, axes=(1,2))
             YGabs = np.abs(YG)
             YG[YGabs > 8*np.std(YGabs)] = 0
             output[:, i:i+w, j:j+w] += np.fft.irfft2(YG)
-            scale[:, i:i+w, j:j+w] += g
+            scale[:, i:i+w, j:j+w] += 1
     
     np.divide(output, scale, out=output, where=scale!=0)
     output[:,:10,:] = 0
