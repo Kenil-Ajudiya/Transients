@@ -53,7 +53,7 @@ def RemoveLines(cube):
             y = cube[:, i:i+w, j:j+w]
             YG = np.fft.rfft2(y, axes=(1,2))
             YGabs = np.abs(YG)
-            YG[YGabs > 8*np.std(YGabs)] = 0
+            YG[YGabs > 7*np.std(YGabs)] = 0
             output[:, i:i+w, j:j+w] += np.fft.irfft2(YG)
             scale[:, i:i+w, j:j+w] += 1
     

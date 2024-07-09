@@ -7,6 +7,7 @@ import gc
 
 start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
+epoch = sys.argv[3]
 
 clean_up = False
 do_scp = False
@@ -15,7 +16,7 @@ scp_source = 'ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids'
 # obsids_fname = 'obsids_shif.txt'
 # obsids_fname = 'obsids_groups.txt'
 # obsids_fname = 'Epoch0084_obsids.txt'
-obsids_fname = 'Epoch0789_obsids.txt'
+obsids_fname = epoch+'_obsids.txt'
 
 with open(obsids_fname, 'r') as file:
     lines = file.readlines()
@@ -24,7 +25,7 @@ with open(obsids_fname, 'r') as file:
 # main_dir = 'candidates'
 # main_dir = 'groups'
 # main_dir = 'Epoch0084_candidates'
-main_dir  = 'Epoch0789_candidates'
+main_dir  = epoch+'_candidates'
 
 # true_mask_table = fits.open(os.path.expanduser('~/group_islands.fits'))[1].data
 # true_mask = SkyCoord(true_mask_table['ra_deg'], true_mask_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
@@ -41,7 +42,7 @@ obs_idx = start_idx
 
 filters = [
     Filter('tcg'  , 5.5, 7.0, True , fil.Correlator, (1,1,1), (125,1,1)),
-    Filter('spike', 5.5, 8.5, False, fil.Spike, 4),
+    Filter('spike', 5.5, 7.5, False, fil.Spike, 3),
     Filter('rms'  , 2.0, 2.25, True , fil.RMS)]
 
 for obsid in obsids[start_idx:end_idx]:
