@@ -31,8 +31,8 @@ main_dir  = epoch+'_candidates'
 # true_mask = SkyCoord(true_mask_table['ra_deg'], true_mask_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
 true_mask = None
 
-path = os.path.expanduser('~/'+main_dir+'/{0}/{0}_{1}')
-workdir = os.path.expanduser('~/'+main_dir+'/{0}')
+path = os.path.expanduser('~/'+main_dir+'/{0}/{0}_{1}') # ------------------------------------------- SAM
+workdir = os.path.expanduser('~/'+main_dir+'/{0}') # ------------------------------------------- SAM
 obs_idx = start_idx
 
 # filters = [
@@ -40,7 +40,7 @@ obs_idx = start_idx
 #     Filter('spike', 5.5, 8.5, False, fil.Spike, 4),
 #     Filter('rms'  , 2.0, 2.5, True , fil.RMS)]
 
-filters = [
+filters = [ # ------------------------------------------- SAM
     Filter('tcg'  , 5.5, 7.0, True , fil.Correlator, (1,1,1), (125,1,1)),
     Filter('spike', 5.5, 7.5, False, fil.Spike, 3),
     Filter('rms'  , 2.0, 2.25, True , fil.RMS)]
@@ -55,7 +55,7 @@ for obsid in obsids[start_idx:end_idx]:
                 os.system('mkdir ~/{0}/{1}'.format(main_dir, obsid))
                 os.system('scp -i id_rsa {0}/{1}/{1}_transient.hdf5 {2}'.format(scp_source, obsid, cube_fname))
             if os.path.isfile(cube_fname):
-                cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=150, true_mask=true_mask)
+                cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=150, true_mask=true_mask) # ------------------------------------------- SAM
                 # if len(cands) > 10:
                 #     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
                 if clean_up:
