@@ -88,7 +88,7 @@ def GetPulsars(skycoord, boxsize):
     idx_psrs = psr_coords.separation(skycoord) < boxsize / 2
     return psrs[idx_psrs]
 
-def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
+def DiagnosticPlot(path, obs, filters, candidate, isl_labels, run_name, deep_name='deep-MFS-image-pb', deep_scp=False):
     boxsize = 1*u.deg
     skycoord = SkyCoord(ra=candidate['ra_deg'], dec=candidate['dec_deg'], unit=(u.deg, u.deg), frame='fk5')
 
@@ -99,9 +99,9 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     flr_cut = [Cutout2D(flr.data, skycoord, boxsize, wcs=obs.wcs).data for flr in filters]
 
     try:
-        deep_fname = path.format(obs.obsid, 'deep-MFS-image-pb.fits')
-        if not os.path.isfile(deep_fname):
-            os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_deep-MFS-image-pb.fits {1}'.format(obs.obsid, deep_fname))
+        deep_fname = path.format(obs.obsid, deep_name+'.fits')
+        if deep_scp and not os.path.isfile(deep_fname):
+            os.system('scp -i id_rsa ubuntu@146.118.68.233:/mnt/gxarchive/Archived_Obsids/{0}/{0}_{1}.fits {2}'.format(obs.obsid, deep_name, deep_fname))
         deep_hdu = fits.open(deep_fname)[0]
         deep_data = np.squeeze(deep_hdu.data)
         deep_wcs = WCS(deep_hdu.header, naxis=['longitude', 'latitude'])
@@ -155,7 +155,7 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
 
     fig.suptitle('obs_id: {0} cand_id: {1} cent_freq: {2} MHz coords: ({3}, {4}) ({5:.6}, {6:.6}) cube_rms: {7:.6} Jy num_cands / num_islands: {8}'.format(obs.obsid, candidate['cand_id'], int(obs.freq/1e6), skycoord.ra.to_string(u.hour), skycoord.dec.to_string(u.degree), skycoord.ra.deg, skycoord.dec.deg, obs.rms, obs.ncands), fontsize=12)
 
-    fig.savefig(path.format(obs.obsid, f'candidate_{candidate["cand_id"]}.png'), bbox_inches="tight")
+    fig.savefig(path.format(obs.obsid, f'{run_name}_{candidate["cand_id"]}.png'), bbox_inches="tight")
     plt.close(fig)
 
     # Cutout GIF
@@ -175,7 +175,7 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels):
     # Combining pngs to gif
     os.system("convert {0} {1}".format(
         path.format(obs.obsid, '??.png'),
-        path.format(obs.obsid, f'candidate_{candidate["cand_id"]}.gif')))
+        path.format(obs.obsid, f'{run_name}_{candidate["cand_id"]}.gif')))
     # Removing png frames
     madefiles = glob(path.format(obs.obsid, '??.png'))
     for f in madefiles:

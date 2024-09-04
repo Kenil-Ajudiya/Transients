@@ -50,8 +50,18 @@ class Filter:
             self.cut_high = self.cut_high_unscaled
         self.data = self.func(cube, *self.args)
 
+# path: a string specifying the path of files. {0} will be replaced with the obsid, {1} will be replaced with the filename. example: '~/home/whatever/observations/{0}/{0}_{1}' 
+# obsid: obsid to run
+# filters: list of Filter objects
+# run_name: prefix to add to filenames specifying what is being done. This is what's stored in the data table in column filter_id
+# make_plots: boolean whether to make plots
+# save_filtered: whether to save fits images of the filter results - normally False
+# obs_name: suffix name of the transient cube
+# max_plots: max number of plots to create
+# true_mask: something or other
+# table_name: suffix name to give the final output table
 
-def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, obs_name='transient.hdf5', max_plots=10, true_mask=None):
+def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, obs_name='transient.hdf5', max_plots=100, true_mask=None, table_name='islands_selected_meta'):
     obs = Observation(path, obsid, obs_name)
 
     # Ignoring high RMS frames
@@ -73,7 +83,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
             io.WriteImage(path.format(obs.obsid, run_name+'_'+flr.name), flr.data, obs.header, flr.name)
 
     # Detect islands
-    isl_table, isl_labels, _ = isl.FindIslands(obs, filters, True)
+    isl_table, isl_labels, _ = isl.FindIslands(obs, filters, True, run_name=run_name)
 
     if true_mask is not None:
         cands_coord = SkyCoord(isl_table['ra_deg'], isl_table['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
@@ -84,7 +94,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     knw_table = knw.FindKnownSources(obs, os.getenv('GGSM', '~/GLEAM-X-pipeline/models/GGSM.fits'), filters)
     cm.CrossMatch(isl_table, knw_table, obs)
 
-    isl_table_selected = sel.SelectSources(obs, isl_table, isl_labels, filters)
+    isl_table_selected = sel.SelectSources(obs, isl_table, isl_labels, filters, max_count=max_plots)
 
     print('obsid:', obsid, '    freq:', obs.freq, '    rms:', obs.rms, '    pointing:', obs.cent.ra.to_string(u.hour), obs.cent.dec.to_string(u.degree))
     print('candidates', len(isl_table), '->', len(isl_table_selected), flush=True)
@@ -99,7 +109,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     if make_plots:
         if len(isl_table_selected) <= max_plots:
             for candidate in isl_table_selected:
-                diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels)
+                diagnostic.DiagnosticPlot(path, obs, filters, candidate, isl_labels, run_name)
 
     # Prepare for upload
     isl_table_selected.add_column(isl_table_selected['maj_rad_pix'], name='rad_pix')
@@ -119,7 +129,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
             ['"%s":%.4f' % (field, isl_table_selected[field][i]) for field in meta_fields_float] +
             ['"%s":"%s"' % (field, isl_table_selected[field][i]) for field in meta_fields_str]) + '}'
 
-    new_table.write(path.format(obsid, run_name+'_islands_selected_meta.fits'), format='fits', overwrite=True)
+    new_table.write(path.format(obsid, run_name+'_'+table_name+'.fits'), format='fits', overwrite=True)
 
     return isl_table_selected
 

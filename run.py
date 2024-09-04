@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 from astropy.table import Table
+import filters as fil
 
 obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
 path = '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_{1}'

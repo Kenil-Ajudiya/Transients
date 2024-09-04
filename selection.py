@@ -8,7 +8,7 @@ import os
 from astropy.time import Time
 from astropy.coordinates import get_body, EarthLocation
 
-def SelectSources(obs, table, labels, filters):
+def SelectSources(obs, table, labels, filters, max_count=100):
     loose = False
 
     min_beam = 0.5              # Minimum beam value normalised by the central beam values

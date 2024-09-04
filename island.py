@@ -9,7 +9,7 @@ from astropy import units as u
 import lowner_john_ellipse as ellipse
 import matplotlib.pyplot as plt
 
-def FindIslands(obs, filters, get_beam=True):
+def FindIslands(obs, filters, get_beam=True, run_name=None):
     # detecting islands
     valid = np.zeros(obs.shape[1:], dtype=bool)
     for flr in filters:
@@ -52,7 +52,10 @@ def FindIslands(obs, filters, get_beam=True):
 
     table['obs_id'][:] = str(obs.obsid)
     table['obs_cent_freq'][:] = obs.freq
-    table['filter_id'][:] = '_'.join([flr.name for flr in filters])
+    if run_name is None:
+        table['filter_id'][:] = '_'.join([flr.name for flr in filters])
+    else:
+        table['filter_id'][:] = run_name
 
     # getting island attributes
     for i in range(n):
