@@ -119,8 +119,14 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     meta_fields_int = ['min_rad_pix', 'maj_rad_pix', 'peak_frame']
     meta_fields_float = ['rot_deg', 'beam_norm', 'tcg', 'spike', 'rms', 'tcg_norm', 'spike_norm', 'rms_norm', 'nks_corr', 'nks2_sep_deg', 'nks2_flux', 'nks2_corr', 'nks2_flux_rat']
     meta_fields_str = ['nks2_name']
+    name_changes = {'peak_flux'    : 'can_peak_flux'   ,
+                    'beam'         : 'can_beam'        ,
+                    'det_stat'     : 'can_det_stat'    ,
+                    'nks_flux_rat' : 'can_nks_flux_rat'}
 
     new_table = isl_table_selected[fits_fields]
+    for key in name_changes:
+        new_table.rename_column(key, name_changes[key])
     new_table.add_column(np.zeros(len(new_table), dtype=np.dtype('<S500')), name='meta')
 
     for i in range(len(new_table)):
@@ -132,4 +138,3 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
     new_table.write(path.format(obsid, run_name+'_'+table_name+'.fits'), format='fits', overwrite=True)
 
     return isl_table_selected
-
