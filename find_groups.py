@@ -1,167 +1,195 @@
 import numpy as np
 import FileIO as io
 import pandas as pd
-from astropy.coordinates import match_coordinates_sky, search_around_sky
+from astropy.coordinates import search_around_sky
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from astropy.table import vstack
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
-import os
 import sys
 
-# from sklearn.cluster import DBSCAN
+def ReadTablesConcat(
+    fname_list,
+    invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright'],
+    filter_bool_names = ['valid_spike', 'valid_tcg', 'valid_rms']):
+    table_list = []
+    for fname in fname_list:
+        try:
+            data = Table.read(fname, format='fits')
+            # data['valid_tcg'] = data['tcg_norm'] > 0.8
+            # data['valid_rms'] = data['rms_norm'] > 0.8
+            # data['invalid_beam'] = data['beam_norm'] < 0.25
+            # data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+            # data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
+            print(f'{fname} read')
+            data.add_column(Table.Column(name='fname', data=[fname for _ in range(len(data))]))
+            table_list.append(data)
+        except:
+            print(f'{fname} not found')
+
+    data = vstack(table_list)
+    return data
+
+def FindGroups(data, match_sep = 1*u.arcmin):
+    if 'group_idx' not in data.columns:
+        data.add_column(Table.Column(name='group_idx', data=np.zeros(len(data), dtype=np.int64)))
+    # if 'group_sep' not in data.columns:
+    #     data.add_column(Table.Column(name='group_sep', data=np.zeros(len(data), dtype=np.float64)))
+    if 'group_len' not in data.columns:
+        data.add_column(Table.Column(name='group_len', data=np.ones(len(data), dtype=np.int64)))
 
 
-# obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
-# fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{obsid}/{obsid}_islands_selected.fits' for obsid in obslist.obsid]
+    data.add_column(Table.Column(name='group_max_sn', data=np.ones(len(data), dtype=np.float64)))
+    data.add_column(Table.Column(name='group_max_ds', data=np.ones(len(data), dtype=np.float64)))
+    data.add_column(Table.Column(name='group_mean_sn', data=np.ones(len(data), dtype=np.float64)))
+    data.add_column(Table.Column(name='group_mean_ds', data=np.ones(len(data), dtype=np.float64)))
 
-# fname_list = ['/home/septagonic/Documents/Transients/islands_setonix/' + fname for fname in os.listdir('/home/septagonic/Documents/Transients/islands_setonix/')]
-# if len(sys.argv) == 3:
-#     fname_list = [f'{sys.argv[1]}/{fname}/{fname}_{sys.argv[2]}' for fname in os.listdir(sys.argv[1])]
-# else:
-#     fname_list = [sys.argv[1]]
+    cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
+    idx1, idx2, sep, _ = search_around_sky(cat, cat, match_sep)
+    sort_idx = np.argsort(idx1)
+    idx1 = idx1[sort_idx]
+    idx2 = idx2[sort_idx]
+    sep = sep[sort_idx]
 
-fname_list = sys.argv[1:]
+    group_idx = np.full(len(data), -1, dtype=np.int64)
+    group_count = 0
+    groups = [set() for _ in range(len(data))]
 
-# obslist = pd.read_csv('100_obs.csv')
-# fname_list = [f'/media/septagonic/CORSAIR/gxarchive/{x}/{x}_4_islands.fits' for x in obslist.obsid]
+    for i in range(len(idx1)):
+        groups[idx1[i]].add(idx2[i])
 
-# invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
-invalid_bool_names = ['invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright']
-filter_bool_names = ['valid_spike', 'valid_tcg', 'valid_rms']
+    for i in range(len(groups)-1, 0, -1):
+        concat = list(groups[i])
+        while len(concat) > 0:
+            if concat[0] != i:
+                concat += list(groups[concat[0]].difference(groups[i]))
+                groups[i] = groups[i].union(groups[concat[0]])
+                groups[concat[0]] = set()
+            del concat[0]
 
-table_list = []
-for fname in fname_list:
-    try:
-        data = Table.read(fname, format='fits')
-        # data['valid_tcg'] = data['tcg_norm'] > 0.8
-        # data['valid_rms'] = data['rms_norm'] > 0.8
-        data['invalid_beam'] = data['beam_norm'] < 0.25
-        data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
-        data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
-        print(f'{fname} read')
-        data.add_column(Table.Column(name='fname', data=[fname for _ in range(len(data))]))
-        table_list.append(data)
-    except:
-        print(f'{fname} not found')
+    # print(groups)
+    # exit()
 
-data = vstack(table_list)
-# data.write('combined.fits', format='fits')
-# data = data[data['obs_cent_freq'] > 100e6]
-# data = data[data['nks1_sep_deg'] > 0.1]
-# data = data[data['nks2_sep_deg'] > 0.1]
-cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
-# idx, sep, _ = match_coordinates_sky(cat, cat, nthneighbor=2)
-marked = np.zeros(len(data), dtype=bool)
-groups = []
-match_sep = 1*u.arcmin
+    new_groups = []
+    group_count = 0
+    for group in groups:
+        group = list(group)
+        if len(group) > 0:
+            data['group_idx'][group] = group_count
+            data['group_len'][group] = len(group)
 
-# def cluster(data, epsilon,N): #DBSCAN, euclidean distance
-#     db     = DBSCAN(eps=epsilon, min_samples=N).fit(data)
-#     labels = db.labels_ #labels of the found clusters
-#     n_clusters = len(set(labels)) - (1 if -1 in labels else 0) #number of clusters
-#     clusters   = [data[labels == i] for i in range(n_clusters)] #list of clusters
-#     return clusters, n_clusters
+            data['group_max_sn'][group] = np.max(data['peak_sn'][group])
+            data['group_max_ds'][group] = np.max(data['det_stat'][group])
+            data['group_mean_sn'][group] = np.mean(data['peak_sn'][group])
+            data['group_mean_ds'][group] = np.mean(data['det_stat'][group])
 
-# centers = [[1, 1,1], [-1, -1,1], [1, -1,1]]
-# cluster(X,epsilon,N)
-    
+            group_count += 1
+            
+        if len(group) > 1:
+            new_groups.append(vstack(data[group]))
 
-# Finding groups of candidates
+    # for i in range(len(idx1)):
+    #     if idx1[i] >= idx2[i]:
+    #         if group_idx[idx1[i]] == -1:
+    #             group_idx[idx1[i]] = group_count
+    #             groups.append([{'cand':data[idx1[i]], 'sep':sep[i].arcmin, 'row':idx1[i]}])
+    #             group_count += 1
+    #         if idx1[i] != idx2[i]:
+    #             if group_idx[idx2[i]] == -1:
+    #                 group_idx[idx2[i]] = group_idx[idx1[i]]
+    #                 groups[group_idx[idx1[i]]].append({'cand':data[idx2[i]], 'sep':sep[i].arcmin, 'row':idx2[i]})
+                
 
-idx1, idx2, sep, _ = search_around_sky(cat, cat, match_sep)
-sort_idx = np.argsort(idx1)
-idx1 = idx1[sort_idx]
-idx2 = idx2[sort_idx]
-sep = sep[sort_idx]
-cur_idx = -1
-group = []
+    # Finding groups of candidates
+    '''
+    groups = []
+    marked = np.zeros(len(data), dtype=bool)
+    cur_idx = -1
+    group = []
 
-for i in range(len(idx1)):
-    if cur_idx != idx1[i]:
-        groups.append(group)
-        group = []
-        if marked[idx1[i]]:
-            continue
-        group = [{'cand':data[idx1[i]], 'sep':0}]
-        marked[idx1[i]] = True
-        cur_idx = idx1[i]
-    if not marked[idx2[i]]:
-        marked[idx2[i]] = True
-        group.append({'cand':data[idx2[i]], 'sep':sep[i].arcmin})
+    for i in range(len(idx1)):
+        if cur_idx != idx1[i]:
+            groups.append(group)
+            group = []
+            if marked[idx1[i]]:
+                continue
+            group = [{'cand':data[idx1[i]], 'sep':0}]
+            marked[idx1[i]] = True
+            cur_idx = idx1[i]
+        if not marked[idx2[i]]:
+            marked[idx2[i]] = True
+            group.append({'cand':data[idx2[i]], 'sep':sep[i].arcmin})
+    '''
+
+    # new_groups = []
+    # for i in range(len(groups)):
+    #     for row in groups[i]:
+    #         row['cand']['group_idx'] = i
+    #         row['cand']['group_sep'] = sep[i].arcmin
+    #         row['cand']['group_len'] = len(groups[i])
         
+    #     if len(groups[i]) > 1:
+    #         new_groups.append(vstack([x['cand'] for x in groups[i]]))
 
+    return new_groups
 
+def PrintGroups(groups):
 
-# for i in range(len(data)):
-#     if not marked[i]:
-#         marked[i] = True
-#         group = [{'cand':data[i], 'sep':0}]
-#         j = i
-#         # While I have not visited you before, and you are close, add to group
-#         while (not marked[idx[j]]) and (sep[j] < match_sep):
-#             j = idx[j]
-#             group.append({'cand':data[j], 'sep':sep[j].arcmin})
-#             marked[j] = True
-#         groups.append(group)
+    # PRINTING
 
+    group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for group in groups]
+    sort_idx = np.argsort(group_lengths)
+    group_lengths_2 = [group_lengths[i] for i in sort_idx]
+    group_lengths = group_lengths_2
+    groups = [groups[i] for i in sort_idx]
+    i = 0
+    obsids = []
+    cands = []
+    for group in groups:
+        if len(group) > 1 and len(group) == group_lengths[i]:
 
-group_lengths = [len(np.unique([cand['cand']['obs_id'] for cand in group])) for group in groups]
-sort_idx = np.argsort(group_lengths)
-group_lengths_2 = [group_lengths[i] for i in sort_idx]
-group_lengths = group_lengths_2
-groups = [groups[i] for i in sort_idx]
-i = 0
-obsids = []
-cands = []
-for group in groups:
-    if len(group) > 1 and len(group) == group_lengths[i]:
+            times = np.array([int(row['cand']['obs_id']) + row['cand']['peak_frame']*4 for row in group])
+            times = np.sort(times)
+            test_period = times[-1] - times[0]
+            period = 0
+            residual = 100000
+            while test_period > 120:
+                test_residual = np.mean((times[1:-1] - times[0]) % test_period)
+                if test_residual < residual:
+                    residual = test_residual
+                    period = test_period
+                test_period /= 2
 
-        times = np.array([int(row['cand']['obs_id']) + row['cand']['peak_frame']*4 for row in group])
-        times = np.sort(times)
-        test_period = times[-1] - times[0]
-        period = 0
-        residual = 100000
-        while test_period > 120:
-            test_residual = np.mean((times[1:-1] - times[0]) % test_period)
-            if test_residual < residual:
-                residual = test_residual
-                period = test_period
-            test_period /= 2
+            if False: #residual > 16:
+                continue
+            else:
+                print('period:', period, '    residual:', residual)
 
-        if False: #residual > 16:
-            continue
-        else:
-            print('period:', period, '    residual:', residual)
+            image_link = 'feh '
 
-        image_link = 'feh '
+            for row in group:
+                cand = row['cand']
+                coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
+                print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['fname'], cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
+                print('%10s %5d %4d MHz %9.9s %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
+                image_link += '%9.9s_candidates/%s_candidate_%d.png ' % (cand['fname'], cand['obs_id'], cand['cand_id'])
+                obsids.append(cand['obs_id'])
+                cands.append(cand)
+            print(image_link)
+            print('--------------------------')
+        i += 1
 
-        for row in group:
-            cand = row['cand']
-            coord = SkyCoord(ra=cand['ra_deg'], dec=cand['dec_deg'], unit='deg', frame='fk5')
-            print_vals = [cand['obs_id'], cand['cand_id'], int(cand['obs_cent_freq']/1e6), cand['fname'], cand['area_pix'], cand['peak_flux'], cand['spike'], row['sep'], coord.ra.to_string(u.hour), coord.dec.to_string(u.degree), cand['spike_norm'], cand['tcg_norm'], cand['rms_norm']]
-            print('%10s %5d %4d MHz %9.9s %4d pix %10.4f Jy %10.4f std %10.4f arcmin %20s %20s %10.4f spike %10.4f tcg %10.4f rms' % tuple(print_vals))
-            image_link += '%9.9s_candidates/%s_candidate_%d.png ' % (cand['fname'], cand['obs_id'], cand['cand_id'])
-            obsids.append(cand['obs_id'])
-            cands.append(cand)
-        print(image_link)
-        print('--------------------------')
-    i += 1
+    print('\n'.join(np.unique(obsids)))
 
-print('\n'.join(np.unique(obsids)))
+if __name__ == '__main__':
+    fname_list = sys.argv[1:]
+    data = ReadTablesConcat(fname_list)
+    groups = FindGroups(data)
+    PrintGroups(groups)
 
-# bruh = vstack(cands)
-# bruh.write('group_islands.fits', format='fits')
-
-# valid = data['obs_cent_freq'] > 120e6
-# valid = (data['cand_id'] < 1000) & (data['nks_sep_deg'] > 0.5) & (data['nks2_sep_deg'] > 0.5)
-# data = data[valid]
-# flux_sort = np.argsort(data['peak_flux'])
-# for i in flux_sort:
-#     print(data[i]['obs_id'], data[i]['cand_id'], data[i]['peak_flux'])
-
+'''
 exit()
 
 ncands = np.array([len(x) for x in table_list])
@@ -187,3 +215,4 @@ plt.ylabel('Fraction of observations at frequency')
 plt.yticks(ticks=[0.01, 0.1, 1], labels=['1%', '10%', '100%'])
 
 plt.show()
+'''
