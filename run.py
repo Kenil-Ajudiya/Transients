@@ -1,3 +1,4 @@
+# NO_GLEAMX = True
 from transient_search import *
 import pandas as pd
 import os

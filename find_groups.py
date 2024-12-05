@@ -32,7 +32,7 @@ def ReadTablesConcat(
     data = vstack(table_list)
     return data
 
-def FindGroups(data, match_sep = 1*u.arcmin):
+def FindGroups(data, match_sep = 1*u.arcmin, sn_name='peak_sn'):
     if 'group_idx' not in data.columns:
         data.add_column(Table.Column(name='group_idx', data=np.zeros(len(data), dtype=np.int64)))
     # if 'group_sep' not in data.columns:
@@ -80,9 +80,9 @@ def FindGroups(data, match_sep = 1*u.arcmin):
             data['group_idx'][group] = group_count
             data['group_len'][group] = len(group)
 
-            data['group_max_sn'][group] = np.max(data['peak_sn'][group])
+            data['group_max_sn'][group] = np.max(data[sn_name][group])
             data['group_max_ds'][group] = np.max(data['det_stat'][group])
-            data['group_mean_sn'][group] = np.mean(data['peak_sn'][group])
+            data['group_mean_sn'][group] = np.mean(data[sn_name][group])
             data['group_mean_ds'][group] = np.mean(data['det_stat'][group])
 
             group_count += 1
