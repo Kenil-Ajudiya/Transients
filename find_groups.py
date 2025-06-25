@@ -32,7 +32,7 @@ def ReadTablesConcat(
     data = vstack(table_list)
     return data
 
-def FindGroups(data, match_sep = 1*u.arcmin, sn_name='peak_sn'):
+def FindGroups(data, match_sep = 1*u.arcmin, sn_names=['peak_sn']):
     if 'group_idx' not in data.columns:
         data.add_column(Table.Column(name='group_idx', data=np.zeros(len(data), dtype=np.int64)))
     # if 'group_sep' not in data.columns:
@@ -40,11 +40,11 @@ def FindGroups(data, match_sep = 1*u.arcmin, sn_name='peak_sn'):
     if 'group_len' not in data.columns:
         data.add_column(Table.Column(name='group_len', data=np.ones(len(data), dtype=np.int64)))
 
-
-    data.add_column(Table.Column(name='group_max_sn', data=np.ones(len(data), dtype=np.float64)))
-    data.add_column(Table.Column(name='group_max_ds', data=np.ones(len(data), dtype=np.float64)))
-    data.add_column(Table.Column(name='group_mean_sn', data=np.ones(len(data), dtype=np.float64)))
-    data.add_column(Table.Column(name='group_mean_ds', data=np.ones(len(data), dtype=np.float64)))
+    for sn_name in sn_names:
+        data.add_column(Table.Column(name=f'group_max_{sn_name}', data=np.ones(len(data), dtype=np.float64)))
+        data.add_column(Table.Column(name=f'group_mean_{sn_name}', data=np.ones(len(data), dtype=np.float64)))
+    data.add_column(Table.Column(name=f'group_max_ds', data=np.ones(len(data), dtype=np.float64)))
+    data.add_column(Table.Column(name=f'group_mean_ds', data=np.ones(len(data), dtype=np.float64)))
 
     cat = SkyCoord(data['ra_deg'], data['dec_deg'], unit=(u.deg, u.deg), frame="fk5")
     idx1, idx2, sep, _ = search_around_sky(cat, cat, match_sep)
@@ -80,9 +80,10 @@ def FindGroups(data, match_sep = 1*u.arcmin, sn_name='peak_sn'):
             data['group_idx'][group] = group_count
             data['group_len'][group] = len(group)
 
-            data['group_max_sn'][group] = np.max(data[sn_name][group])
+            for sn_name in sn_names:
+                data[f'group_max_{sn_name}'][group] = np.max(data[sn_name][group])
+                data[f'group_mean_{sn_name}'][group] = np.mean(data[sn_name][group])
             data['group_max_ds'][group] = np.max(data['det_stat'][group])
-            data['group_mean_sn'][group] = np.mean(data[sn_name][group])
             data['group_mean_ds'][group] = np.mean(data['det_stat'][group])
 
             group_count += 1

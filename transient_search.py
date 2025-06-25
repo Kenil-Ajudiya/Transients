@@ -49,6 +49,7 @@ class Filter:
             self.cut_low = self.cut_low_unscaled
             self.cut_high = self.cut_high_unscaled
         self.data = self.func(cube, *self.args)
+        return self.data
 
 # path: a string specifying the path of files. {0} will be replaced with the obsid, {1} will be replaced with the filename. example: '~/home/whatever/observations/{0}/{0}_{1}' 
 # obsid: obsid to run

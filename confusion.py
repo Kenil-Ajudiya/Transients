@@ -6,6 +6,8 @@ import matplotlib.colors as col
 import matplotlib.patches as patches
 import mplcursors
 import astropy.units as u
+import filters as fil
+from transient_search import Filter
 
 ############################## Print Confusion Matrix ##############################
 
@@ -36,8 +38,11 @@ def ConfusionLatex(confusion, classes):
 
 def ConfusionColours(confusion, classes, axs, cmap=plt.cm.Blues, diagonal=False):
     confusion_norm = confusion.astype(np.float64)
-    confusion_norm -= np.min(confusion)
-    confusion_norm /= np.max(confusion_norm)
+    try:
+        confusion_norm -= np.min(confusion)
+        confusion_norm /= np.max(confusion_norm)
+    except:
+        pass
     confusion_norm **= 0.3
     axs.matshow(confusion_norm, cmap=cmap, aspect='auto')
     axs.set_yticks(np.arange(len(classes)), labels=classes, fontsize=16)
@@ -94,27 +99,60 @@ def ReadTables(obslist, path):
         table = Table.read(path.format(int(row['obsid'])), format='fits')
         if 'obs_cent_freq' not in table.colnames:
             table.add_column(np.full(len(table), row['freq']), name='obs_cent_freq')
+        if 'obs_id' not in table.colnames:
+            table.add_column(np.full(len(table), row['obsid']), name='obs_id')
         table_list.append(table)
     return vstack(table_list), table_list
 
 if __name__=='__main__':
+    # plot_dir = 'paper_plots/'
+    plot_dir = 'paper_plots_2/'
     # obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
     obslist = pd.read_csv('100_obs.csv')
     # run_name = 'mod_found'
-    # prefix = 'mod_scint_'
-    # suffix = '_true'
-    prefix = 'real_'
-    suffix = ''
+    
+    # UNCOMMENT FOR MODELLED RECOVERY PLOTS
+    prefix = 'mod_'
+    suffix = '_true'
+
+    # UNCOMMENT FOR REAL CANDIDATES PLOTS
+    # prefix = 'real_'
+    # suffix = ''
+    
     cand_name = 'recovered modelled transients (of 100)'
     # cand_name = 'candidates'
 
     # ALL ISLANDS
     data, table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_'+prefix+'islands'+suffix+'.fits')
     filter_bool_names = ['valid_tcg', 'valid_spike', 'valid_rms']
-    invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright', 'is_moon']
+    invalid_bool_names = ['invalid_beam', 'invalid_majmin', 'scintil_dist', 'scintil_corr', 'close_to_ateam', 'close_to_bright', 'invalid_area', 'invalid_mean']
+    
     data['valid_spike'] = data['spike_norm'] > 8.5/8
     data['valid_tcg'] = data['tcg_norm'] > 7/8
-    data['valid_rms'] = data['rms_norm'] > 5/6
+    data['valid_rms'] = data['rms_norm'] > 2.25/2.5
+    
+    max_area = 20
+    data.add_column(Table.Column(name='mean', data=np.mean(data['curve'].data, axis=1)))
+    data.add_column(Table.Column(name='fluence', data=np.sum(np.abs(data['curve'].data), axis=1) / 4.0))
+    filters = [ # ------------------------------------------- SAM
+        Filter('tcg'  , 5.5, 7.0, True , fil.Correlator, (1,1,1), (125,1,1)),
+        Filter('spike', 5.5, 7.5, False, fil.Spike, 3),
+        Filter('rms'  , 2.0, 2.25, True , fil.RMS)]
+    data.add_column(Table.Column(name='obs_rms', data=data['tcg'].data/(data['tcg_norm'].data*filters[0].cut_high_unscaled)))
+    data.add_column(Table.Column(name='peak_sn', data=data['peak_flux'].data/data['obs_rms'].data))
+    data.add_column(Table.Column(name='fluence_sn', data=data['fluence'].data/data['obs_rms'].data))
+    try:
+        data.add_column(Table.Column(name='invalid_area', data=data['area_pix'].data > max_area))
+    except ValueError:
+        data['invalid_area'] = data['area_pix'].data > max_area
+    data.add_column(Table.Column(name='invalid_mean', data=np.abs(data['mean'].data) > data['obs_rms'].data))
+    data.add_column(Table.Column(name='invalid_freq', data=data['obs_cent_freq'].data < 0))#100.00e6))
+    width, height = 2400, 2400
+    margin = 10
+    data.add_column(Table.Column(name='on_edge', data=
+        (data['x_pix'].data < margin) | (data['x_pix'].data > width-margin) |
+        (data['y_pix'].data < margin) | (data['y_pix'].data > height-margin)))
+    
     # Brooooooo ----------------------------------------------------------
     # min_radius = 0.066666666
     # flux_ratio = np.ones(len(data)) * 1.1
@@ -132,13 +170,14 @@ if __name__=='__main__':
     # data['scintil_corr'] = scintil_corr
     # --------------------------------------------------------------------
     data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
+    data = data[~(data['on_edge'].data | data['invalid_freq'].data)]
     data['invalid_majmin'] &= data['area_pix'] > 3
     selection_classes = filter_bool_names + invalid_bool_names
     fig = plt.figure(figsize=(11, 6.5))
     # Confusion
     axs = fig.add_axes(rect=(0.2, 0.11, 0.425, 0.675))
     confusion = CalcConfusion(data, selection_classes)
-    ConfusionColours(confusion, selection_classes, axs, diagonal=True)
+    ConfusionColours(confusion, selection_classes, axs, plt.cm.Purples, diagonal=True)
     axs.axvline(2.5, c='black')
     axs.axhline(2.5, c='black')
     # Frequencies
@@ -153,16 +192,16 @@ if __name__=='__main__':
     percategory, categories = CalcPerCategory(data, [None], 'obs_cent_freq')
     categories = [f'{int(x/1e6)} MHz' for x in categories]
     ConfusionColours(percategory, categories, axs, plt.cm.Greens)
-    axs.set_yticklabels(['Overall'] + ['']*4)
+    axs.set_yticklabels(['Overall'] + ['']*(len(categories)-1))
     axs.set_xticklabels([])
     # Exclusive
     axs = fig.add_axes(rect=(0.855, 0.11, 0.04, 0.675))
     exclusive = CalcExclusive(data, filter_bool_names, invalid_bool_names)
-    ConfusionColours(exclusive, ['exclusive'], axs, plt.cm.Reds)
+    ConfusionColours(exclusive, ['exclusive'], axs, plt.cm.Oranges)
     axs.set_yticklabels([])
     axs.axhline(2.5, c='black')
     plt.tight_layout()
-    plt.savefig('paper_plots/'+prefix+'per_type_mat.pdf')
+    # plt.savefig(plot_dir+prefix+'per_type_mat.pdf')
 
     # SELECTED ISLANDS
     # data, table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_'+prefix+'islands_selected'+suffix+'.fits')
@@ -175,14 +214,14 @@ if __name__=='__main__':
     data = data[np.logical_or.reduce([data[name].value for name in filter_bool_names])]
     data = data[~np.logical_or.reduce([data[name].value for name in invalid_bool_names])]
     obsids_unique, unique_counts = np.unique(data['obs_id'], return_counts=True)
-    obsids_invalid = obsids_unique[unique_counts > 15]
-    data = data[~np.array([row['obs_id'] in obsids_invalid for row in data], dtype=bool)]
+    # obsids_invalid = obsids_unique[unique_counts > 15]
+    # data = data[~np.array([row['obs_id'] in obsids_invalid for row in data], dtype=bool)]
     selection_classes = filter_bool_names
     fig = plt.figure(figsize=(7, 3.5))
     # Confusion
     axs = fig.add_axes(rect=(0.2, 0.25, 0.2, 0.39))
     confusion = CalcConfusion(data, selection_classes)
-    ConfusionColours(confusion, selection_classes, axs, diagonal=False)
+    ConfusionColours(confusion, selection_classes, axs, plt.cm.Purples, diagonal=False)
     # Frequencies
     axs = fig.add_axes(rect=(0.425, 0.25, 0.4, 0.39))
     percategory, categories = CalcPerCategory(data, selection_classes, 'obs_cent_freq')
@@ -194,15 +233,15 @@ if __name__=='__main__':
     percategory, categories = CalcPerCategory(data, [None], 'obs_cent_freq')
     categories = [f'{int(x/1e6)} MHz' for x in categories]
     ConfusionColours(percategory, categories, axs, plt.cm.Greens)
-    axs.set_yticklabels(['Overall'] + ['']*4)
+    axs.set_yticklabels(['Overall'] + ['']*(len(categories)-1))
     axs.set_xticklabels([])
     # Exclusive
     axs = fig.add_axes(rect=(0.85, 0.25, 0.062, 0.39))
     exclusive = CalcExclusive(data, filter_bool_names)
-    ConfusionColours(exclusive, ['exclusive'], axs, plt.cm.Reds)
+    ConfusionColours(exclusive, ['exclusive'], axs, plt.cm.Oranges)
     axs.set_yticklabels([])
     plt.tight_layout()
-    plt.savefig('paper_plots/'+prefix+'sel_per_type_mat.pdf')
+    # plt.savefig(plot_dir+prefix+'sel_per_type_mat.pdf')
     
     plt.figure()
     freq_list = np.unique(obslist['freq'])
@@ -221,13 +260,15 @@ if __name__=='__main__':
     plt.ylabel('Fraction of observations at frequency')
     plt.yticks(ticks=[0.01, 0.1, 1], labels=['1%', '10%', '100%'])
     plt.tight_layout()
-    plt.savefig('paper_plots/'+prefix+'sel_per_obs_hist.pdf')
+    # plt.savefig(plot_dir+prefix+'sel_per_obs_hist.pdf')
 
     plt.figure(figsize=(12, 4))
     obslist = obslist.iloc[np.argsort(obslist['freq'])]
-    freq_sort = np.argsort(obslist['freq'].values.astype(np.int64))
-    freq_unique = np.unique(obslist['freq'].values.astype(np.int64))
-    freqs = obslist['freq'].values[freq_sort].astype(np.int64)
+    freq_list = obslist['freq'].values
+    freq_list = freq_list[freq_list > 100e6]
+    freq_sort = np.argsort(freq_list.astype(np.int64))
+    freq_unique = np.unique(freq_list.astype(np.int64))
+    freqs = freq_list[freq_sort].astype(np.int64)
     obsids = obslist['obsid'].values[freq_sort]
     counts = np.array([np.count_nonzero(data['obs_id'].astype(np.int64) == obsid) for obsid in obsids])
     print(counts)
@@ -245,7 +286,7 @@ if __name__=='__main__':
     plt.ylabel('Number of '+cand_name)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('paper_plots/'+prefix+'sel_per_obs_bar.pdf')
+    # plt.savefig(plot_dir+prefix+'sel_per_obs_bar.pdf')
 
     plt.figure(figsize=(12, 4))
     rms = obslist['rms'].values[freq_sort]
@@ -261,61 +302,95 @@ if __name__=='__main__':
     plt.ylabel('Cube RMS (Jy)')
     plt.legend()
     plt.tight_layout()
-    plt.savefig('paper_plots/cube_rms_bar.pdf')
+    # plt.savefig('paper_plots/cube_rms_bar.pdf')
 
-    if False: # For modelled data (non-scintillating)
+    if True and prefix == 'mod_': # For modelled data (non-scintillating)
         mod_data, mod_table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_modtab.fits')
+        # mod_data = mod_data[mod_data['obs_cent_freq'] > 100e6]
+        mod_data.add_column(Table.Column(name='obs_rms', data=np.zeros(len(mod_data))))
+        for index, row in obslist.iterrows():
+            mod_data['obs_rms'][mod_data['obs_id'] == row['obsid']] = row['rms']
+        # mod_data.add_column(Table.Column(name='fluence', data=mod_data['flux']*mod_data['dur']*np.sqrt(2*np.pi)))
+        # mod_data['fluence'] -= 100/4 * mod_data['fluence']
+        import gaussian as g
+        def Fluence(flux, dur, beam, rms):
+            # trans = flux * mod.MakeTrans([dur/4,0,0], [25,0,0], shift=[0.01,0,0])
+            trans = flux * g.Gaussian(dur/4, 25)
+            trans -= np.mean(trans)
+            # trans *= beam
+            # fig_trans, axs_trans = plt.subplots()
+            # axs_trans.plot(trans)
+            # plt.show()
+            return (np.sum(np.abs(trans))) * 4
+        mod_data.add_column(Table.Column(name='fluence', data=np.array([Fluence(x['flux'], x['dur'], x['beam'], x['obs_rms']) for x in mod_data])))
+        mod_data.add_column(Table.Column(name='peak_sn', data=mod_data['flux'].data/mod_data['obs_rms'].data))
+        mod_data.add_column(Table.Column(name='fluence_sn', data=mod_data['fluence'].data/mod_data['obs_rms'].data))
+        data.add_column(Table.Column(name='mod_fluence', data=np.array([Fluence(x['mod_flux'], x['mod_dur'], x['beam'], x['obs_rms']) for x in data])))
+        data.add_column(Table.Column(name='mod_peak_sn', data=data['peak_flux'].data/data['obs_rms'].data))
+        data.add_column(Table.Column(name='mod_fluence_sn', data=data['mod_fluence'].data/data['obs_rms'].data))
+        val_name = 'fluence'
+        # val_name = 'flux'
         # Peak flux histogram
-        plt.figure(figsize=(5.5, 3.5))
-        ax = plt.subplot(1, 2, 1)
+        # plt.figure(figsize=(5.5, 3.5))
+        fig, axs = plt.subplots(1, 2, figsize=(5.5, 3.5))
+        fig.subplots_adjust(wspace=0.0, hspace=0.0, left=0.15, right=0.95, bottom=0.4, top=0.95)
+        from matplotlib.ticker import ScalarFormatter
+
+        ax = axs[0]
         # freq_list = np.unique(obslist['freq'])
         freq_list = np.unique(mod_data['obs_cent_freq'])
-        bins = np.geomspace(0.2, 3, 11, True)
-        hist, bins = np.histogram(data['mod_flux'], bins=bins)
-        hist_all, _ = np.histogram(mod_data['flux'], bins=bins)
+        # bins = np.geomspace(0.2, 3, 11, True)
+        # bins = np.geomspace(40, 150, 20)
+        bins = np.geomspace(np.min(mod_data[val_name]), np.max(mod_data[val_name]), 15)
+        hist, bins = np.histogram(data['mod_'+val_name], bins=bins)
+        hist_all, _ = np.histogram(mod_data[val_name], bins=bins)
         colors = [plt.cm.viridis(x) for x in np.linspace(0, 1, 5, endpoint=True)]
-        plt.stairs(hist/hist_all, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
+        ax.stairs(hist/hist_all, edges=bins, label=f'Overall', alpha=0.5, fill=True, lw=2)
         # Full data set
         for i in range(len(freq_list)):
-            hist, _ = np.histogram(data['mod_flux'][data['obs_cent_freq'] == freq_list[i]], bins=bins)
-            hist_all, _ = np.histogram(mod_data['flux'][mod_data['obs_cent_freq'] == freq_list[i]], bins=bins)
-            plt.stairs(hist/hist_all, edges=bins, label=f'{int(freq_list[i]/1e6)} MHz', lw=1, color=colors[i])
-        plt.legend(loc='lower right')
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.xlabel('Peak flux (Jy)')
-        plt.ylabel('Fraction of modelled transients recovered')
-        plt.yticks(ticks=[0.05, 0.1, 1], labels=['5%', '10%', '100%'])
+            hist, _ = np.histogram(data['mod_'+val_name][data['obs_cent_freq'] == freq_list[i]], bins=bins)
+            hist_all, _ = np.histogram(mod_data[val_name][mod_data['obs_cent_freq'] == freq_list[i]], bins=bins)
+            ax.stairs(hist/hist_all, edges=bins, label=f'{int(freq_list[i]/1e6)} MHz', lw=1, color=colors[i], baseline=None)
+        ax.legend(loc='lower right', bbox_to_anchor=[0.8, -0.7], ncol=2)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_xlabel('$I_\\text{peak}$ (Jy)')
+        # ax.set_ylabel('Fraction of modelled transients recovered')
+        ax.set_ylabel('Recall estimate')
+        ax.set_yticks(ticks=[0.1, 1], labels=['10%', '100%'])
+        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
+        ax = axs[1]
         # Peak flux histogram (split by filter)
-        plt.subplot(1, 2, 2)
+        # plt.subplot(1, 2, 2)
         # data = data[data['mod_flux'] < 1]
         # mod_data = mod_data[mod_data['flux'] < 1]
         filters = np.array(['valid_tcg', 'valid_spike', 'valid_rms'])
         bins = np.geomspace(0.1, 5, 11, True)
         hist, bins = np.histogram(data['mod_dur'], bins=bins)
         hist_all, _ = np.histogram(mod_data['dur'], bins=bins)
-        plt.stairs(hist/hist_all, edges=bins*4, label=f'Overall', alpha=0.5, fill=True, lw=2)
+        ax.stairs(hist/hist_all, edges=bins*4, label=f'Overall', alpha=0.5, fill=True, lw=2)
         colors = ['blue', 'orange', 'green', 'red', 'purple']
         # Full data set
         for i in range(len(filters)):
             hist, _ = np.histogram(data['mod_dur'][data[filters[i]]], bins=bins)
-            plt.stairs(hist/hist_all, edges=bins*4, label=filters[i], lw=1, color=colors[i])
+            ax.stairs(hist/hist_all, edges=bins*4, label=filters[i], lw=1, color=colors[i], baseline=None)
         # Dim data set
         hist_all, _ = np.histogram(mod_data['dur'][mod_data['flux'] < .5], bins=bins)
         for i in range(len(filters)):
             hist, _ = np.histogram(data['mod_dur'][data[filters[i]] & (data['mod_flux'] < .5)], bins=bins)
-            plt.stairs(hist/hist_all, edges=bins*4, lw=1, color=colors[i], ls='--')
-        plt.plot([0, 0], [0.01, 0.01], 'k--', label=f'flux<0.5Jy')
-        plt.legend(loc='lower right')
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.xlabel('Pulse σ (s)')
+            ax.stairs(hist/hist_all, edges=bins*4, lw=1, color=colors[i], ls='--', baseline=None)
+        ax.plot([0, 0], [0.01, 0.01], 'k--', label=f'flux<0.5Jy')
+        ax.legend(loc='lower right', bbox_to_anchor=[1.05, -0.7], ncol=2)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_xlabel('$\\sigma_\\text{time}$ (s)')
         # plt.ylabel('Fraction of modelled transients recovered')
-        plt.yticks([])
-        plt.ylim(ax.get_ylim())
-        plt.tight_layout()
-        plt.savefig('paper_plots/'+prefix+'sel_det_hist.pdf')
+        ax.set_yticks([])
+        ax.set_ylim(ax.get_ylim())
+        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        # ax.tight_layout()
+        # plt.savefig(plot_dir+prefix+'sel_det_hist.pdf')
 
     if False: # For modelled data (scintillating)
         mod_data, mod_table_list = ReadTables(obslist, '/media/septagonic/CORSAIR/gxarchive/{0}/{0}_modtab_scint.fits')
@@ -380,7 +455,7 @@ if __name__=='__main__':
         # plt.yticks([])
         plt.ylim(ax.get_ylim())
         plt.tight_layout()
-        plt.savefig('paper_plots/'+prefix+'sel_det_hist.pdf')
+        # plt.savefig(plot_dir+prefix+'sel_det_hist.pdf')
 
     plt.show()
 
