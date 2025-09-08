@@ -136,6 +136,7 @@ def TransientSearch(path, obsid, filters, run_name, make_plots, save_filtered, o
             ['"%s":%.4f' % (field, isl_table_selected[field][i]) for field in meta_fields_float] +
             ['"%s":"%s"' % (field, isl_table_selected[field][i]) for field in meta_fields_str]) + '}'
 
-    new_table.write(path.format(obsid, run_name+'_'+table_name+'.fits'), format='fits', overwrite=True)
+    out_table_fname = path.format(obsid, run_name+'_'+table_name+'.fits')
+    new_table.write(out_table_fname, format='fits', overwrite=True)
 
-    return isl_table_selected
+    return isl_table_selected, out_table_fname

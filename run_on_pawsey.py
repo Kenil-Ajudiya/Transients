@@ -5,6 +5,7 @@ from astropy.io import fits
 import os
 import sys
 import gc
+from post_fixup import Fixup
 
 start_idx = int(sys.argv[1])
 end_idx = int(sys.argv[2])
@@ -56,7 +57,7 @@ for obsid in obsids[start_idx:end_idx]:
                 os.system('mkdir ~/{0}/{1}'.format(main_dir, obsid))
                 os.system('scp -i id_rsa {0}/{1}/{1}_transient.hdf5 {2}'.format(scp_source, obsid, cube_fname))
             if os.path.isfile(cube_fname):
-                cands = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=150, true_mask=true_mask) # ------------------------------------------- SAM
+                cands, table_fname = TransientSearch(path, obsid, filters, 'try_1', True, False, max_plots=150, true_mask=true_mask) # ------------------------------------------- SAM
                 # if len(cands) > 10:
                 #     os.system(f'echo {obsid}, {len(cands)} >> bad_obsids.txt')
                 if clean_up:

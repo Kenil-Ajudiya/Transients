@@ -39,7 +39,7 @@ filters = [
 # path = '/home/septagonic/Documents/Transients/investigation/J0504_3806/{0}/{0}_{1}'
 
 # for obsid in [1287081384]:
-for obsid in [obsids[0]]:
+for obsid in obsids:
     print('--------------', obsid, '------', obs_idx)
     obs_idx += 1
     # cands = TransientSearch(path, obsid, filters, 'mod_2', False, False, 'modcube.fits')

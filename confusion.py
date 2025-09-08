@@ -105,6 +105,9 @@ def ReadTables(obslist, path):
     return vstack(table_list), table_list
 
 if __name__=='__main__':
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+
     # plot_dir = 'paper_plots/'
     plot_dir = 'paper_plots_2/'
     # obslist = pd.read_csv('/media/septagonic/CORSAIR/gxarchive/obs_data.csv')
@@ -351,10 +354,10 @@ if __name__=='__main__':
             hist, _ = np.histogram(data['mod_'+val_name][data['obs_cent_freq'] == freq_list[i]], bins=bins)
             hist_all, _ = np.histogram(mod_data[val_name][mod_data['obs_cent_freq'] == freq_list[i]], bins=bins)
             ax.stairs(hist/hist_all, edges=bins, label=f'{int(freq_list[i]/1e6)} MHz', lw=1, color=colors[i], baseline=None)
-        ax.legend(loc='lower right', bbox_to_anchor=[0.8, -0.7], ncol=2)
+        ax.legend(loc='lower right', bbox_to_anchor=[0.8, -0.6], ncol=2)
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_xlabel('$I_\\text{peak}$ (Jy)')
+        ax.set_xlabel('$I_\\text{peak}$ (Jy/beam)')
         # ax.set_ylabel('Fraction of modelled transients recovered')
         ax.set_ylabel('Recall estimate')
         ax.set_yticks(ticks=[0.1, 1], labels=['10%', '100%'])
@@ -380,8 +383,8 @@ if __name__=='__main__':
         for i in range(len(filters)):
             hist, _ = np.histogram(data['mod_dur'][data[filters[i]] & (data['mod_flux'] < .5)], bins=bins)
             ax.stairs(hist/hist_all, edges=bins*4, lw=1, color=colors[i], ls='--', baseline=None)
-        ax.plot([0, 0], [0.01, 0.01], 'k--', label=f'flux<0.5Jy')
-        ax.legend(loc='lower right', bbox_to_anchor=[1.05, -0.7], ncol=2)
+        ax.plot([0, 0], [0.01, 0.01], 'k--', label='$I_\\text{peak} < 0.5$ Jy/beam')
+        ax.legend(loc='lower right', bbox_to_anchor=[1.05, -0.6], ncol=2)
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_xlabel('$\\sigma_\\text{time}$ (s)')
