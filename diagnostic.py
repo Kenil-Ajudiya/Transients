@@ -119,19 +119,19 @@ def DiagnosticPlot(path, obs, filters, candidate, isl_labels, run_name, deep_nam
         obs_cutout.append(Cutout2D(obs.data[i], skycoord, boxsize, wcs=obs.wcs).data)
     obs_cutout = np.stack(obs_cutout, axis=0)
 
-    try:
-        # 'GLEAM 72-103 MHz', 'GLEAM 103-134 MHz', 'GLEAM 139-170 MHz', 'GLEAM 170-231 MHz'
-        survey='GLEAM 170-231 MHz'
-        gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize*1.5)[0][0]
-        gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
-        gleam_wcs = peak_frame.wcs
-        # gleam_data = gleam_hdu.data
-        # gleam_wcs = WCS(gleam_hdu.header, naxis=2)
-    except Exception as e:
-        gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
-        gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
-        gleam_wcs = peak_frame.wcs
-        print(e, flush=True)
+    # try:
+    #     # 'GLEAM 72-103 MHz', 'GLEAM 103-134 MHz', 'GLEAM 139-170 MHz', 'GLEAM 170-231 MHz'
+    #     survey='GLEAM 170-231 MHz'
+    #     gleam_hdu = SkyView.get_images(position=skycoord, survey=survey, radius=boxsize*1.5)[0][0]
+    #     gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+    #     gleam_wcs = peak_frame.wcs
+    #     # gleam_data = gleam_hdu.data
+    #     # gleam_wcs = WCS(gleam_hdu.header, naxis=2)
+    # except Exception as e:
+    gleam_hdu = fits.open(os.getenv('GLEAM_GP', "~/Documents/MWA-GPM-data/GLEAM_GP.fits"))[0]
+    gleam_data, _ = reproject_interp(gleam_hdu, peak_frame.wcs, peak_frame.data.shape)
+    gleam_wcs = peak_frame.wcs
+    # print(e, flush=True)
 
     WCS()
 

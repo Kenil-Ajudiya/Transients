@@ -6,12 +6,12 @@ From: ubuntu:22.04
 
 %files
     # List fo files to copy to the container filesystem e.g. src dest
-    /home/septagonic/GLEAM-X-pipeline/data/pb/gleam_xx_yy.hdf5 /data/gleam_xx_yy.hdf5
-    /home/septagonic/GLEAM-X-pipeline/data/pb/gleam_jones.hdf5 /data/gleam_jones.hdf5
-    /home/septagonic/Documents/MWA-GPM-data/atnf_pulsar_cat.fits /data/atnf_pulsar_cat.fits
-    /home/septagonic/Documents/MWA-GPM-data/GLEAM_GP.fits /data/GLEAM_GP.fits
-    /home/septagonic/Documents/Transients/container_modules /modules
-    /home/septagonic/GLEAM-X-pipeline/models/GGSM.fits /data/GGSM.fits
+    /home/kenil/PhD/Software/GLEAM-X-pipeline/data/pb/gleam_xx_yy.hdf5 /data/gleam_xx_yy.hdf5
+    /home/kenil/PhD/Software/GLEAM-X-pipeline/data/pb/gleam_jones.hdf5 /data/gleam_jones.hdf5
+    /home/kenil/PhD/Software/Documents/MWA-GPM-data/atnf_pulsar_cat.fits /data/atnf_pulsar_cat.fits
+    /home/kenil/PhD/Software/Documents/MWA-GPM-data/GLEAM_GP.fits /data/GLEAM_GP.fits
+    /home/kenil/PhD/Software/Documents/Transients/container_modules /modules
+    /home/kenil/PhD/Software/GLEAM-X-pipeline/models/GGSM.fits /data/GGSM.fits
 
 %environment
     # Environemtn variables set at runtime (not available at build time)
@@ -61,5 +61,3 @@ From: ubuntu:22.04
 
 %help
     # Test to show when help command is issued
-
-

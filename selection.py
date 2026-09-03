@@ -8,7 +8,7 @@ import os
 from astropy.time import Time
 from astropy.coordinates import get_body, EarthLocation
 
-def SelectSources(obs, table, labels, filters, max_count=100):
+def SelectSources(obs, table, labels, filters, max_count=10000):
     loose = False
 
     min_beam = 0.5              # Minimum beam value normalised by the central beam values
@@ -27,7 +27,7 @@ def SelectSources(obs, table, labels, filters, max_count=100):
         flux_ratio = 1.5
     if obs.freq < 100e6:
         flux_ratio = 2.0
-    max_count = 100              # Maximum number of candidates allowed
+    max_count = 10000              # Maximum number of candidates allowed
     cut_scales = [1.0, 1.25, 1.5]
 
     if loose:
@@ -107,6 +107,9 @@ def SelectSources(obs, table, labels, filters, max_count=100):
 
     # Oring everything together
     # invalid = invalid_area | invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
+    scintil_dist[:]=False
+    scintil_corr[:]=False
+    close_to_bright[:]=False
     invalid = invalid_beam | scintil_dist | scintil_corr | close_to_ateam | close_to_bright | ~valid_any_filter | invalid_majmin | is_moon | is_jupiter
 
     too_many = np.zeros(len(table), dtype=bool)
@@ -131,4 +134,3 @@ def SelectSources(obs, table, labels, filters, max_count=100):
     # return new_table[~combined]
 
     return new_table
-    
